@@ -1,0 +1,21 @@
+################################################################################
+# MRS Version: 1.9.1
+# 自动生成的文件。不要编辑！
+################################################################################
+
+# Add inputs and outputs from these tool invocations to the build variables 
+C_SRCS += \
+D:/Downloads/开发资料/runsmartcar/Demo_gyroscope07_19_cpcp/libraries/LVGL/src/widgets/roller/lv_roller.c 
+
+OBJS += \
+./LVGL/src/widgets/roller/lv_roller.o 
+
+C_DEPS += \
+./LVGL/src/widgets/roller/lv_roller.d 
+
+
+# Each subdirectory must supply rules for building sources it contributes
+LVGL/src/widgets/roller/lv_roller.o: D:/Downloads/开发资料/runsmartcar/Demo_gyroscope07_19_cpcp/libraries/LVGL/src/widgets/roller/lv_roller.c
+	@	@	riscv-none-embed-gcc -march=rv32imafc -mabi=ilp32f -msmall-data-limit=8 -mno-save-restore -O1 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -fno-common -pedantic -Wunused -Wuninitialized -Wall  -g -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\Libraries\doc" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS\include" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS\portable\Common" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS\portable\GCC\RISC-V" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS\portable\GCC\RISC-V\chip_specific_extensions\RV32I_PFIC_no_extensions" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS\portable\MemMang" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\FreeRTOS" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\examples" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\examples\porting" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\core" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\display" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\draw" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\drivers" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\font" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\indev" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\layouts" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\libs" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\misc" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\osal" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\others" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\stdlib" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\themes" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\tick" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL\src\widgets" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\sdk\Core" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\sdk\Ld" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\sdk\Peripheral" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\sdk\Startup" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\project\user\inc" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\zf_common" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\zf_device" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\project\code" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\zf_driver" -I"D:\Downloads\开发资料\runsmartcar\Demo_gyroscope07_19_cpcp\libraries\LVGL" -std=gnu11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -c -o "$@" "$<"
+	@	@
+
