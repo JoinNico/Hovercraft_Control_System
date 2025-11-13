@@ -1,0 +1,7 @@
+# LaTeX编译生成的临时文件
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg

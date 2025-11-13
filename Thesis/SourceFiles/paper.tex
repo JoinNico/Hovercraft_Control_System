@@ -1,0 +1,720 @@
+\documentclass[12pt, a4paper, oneside]{ctexart}
+\usepackage{amsmath, amsthm, amssymb, graphicx, booktabs, multirow, geometry, float}
+\usepackage{enumerate}
+\usepackage{listings}
+% \usepackage{xcolor}
+\usepackage{txfonts, subfigure, xpatch}
+\usepackage[thicklines]{cancel}
+\usepackage[utf8]{inputenc}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{colortbl}
+
+\geometry{a4paper,scale=0.8}
+% \title{嵌入式系统设计}
+% \author{}
+\begin{document}
+
+
+%\maketitle
+\newpage
+
+\tableofcontents
+
+\newpage
+\part{系统概览与技术要求}
+\section{系统概览}
+\subsection{系统简要介绍}
+气垫船通过其底部安装的风扇或喷嘴产生高压空气，形成一个气垫，将船体抬升离开水面或地面一定的高度。这种空气垫层大大减少了船体与水面或地面的接触，从而显著降低了摩擦阻力，使得气垫船能够以更高的速度前进，甚至能够在泥滩、浅滩、沼泽、冰面等传统船只无法行驶的复杂地形上自由移动。在军事、救援、旅游等领域，气垫船因其全地形通过能力和高效的行驶性能得到了广泛应用。
+\section{技术要求}
+\subsection{系统的动力学原理}
+在设计气垫船时，需考虑的几项关键动力学原理包括：
+\begin{enumerate}[i)]
+    \item 推力与阻力的平衡：气垫船需要有足够的推力克服阻力，推力主要由风扇或喷嘴产生，阻力则包括空气阻力、水面或地面摩擦阻力和波浪阻力等。
+    \item 空气动力学效应：船体设计应尽量减少空气阻力，这包括优化船体形状以降低风阻，以及确保风扇喷嘴的设计能够有效地将空气转化为向下的推力。
+    \item 浮力和稳定性的控制：通过气垫来保持浮力，确保船体稳定是设计时的重要考量。这通常涉及调整风扇的位置、数量和输出功率来精确控制浮力和稳定性。
+    \end{enumerate} 
+\subsection{系统的主要结构件及功能}
+气垫船的核心组件包括风扇、船体结构、气垫密封系统和推进系统。下面分别介绍这些组件的功能：
+\begin{enumerate}[i)]
+    \item 风扇：负责产生高速气流，推动空气进入船底形成气垫。
+    \item 船体结构：需要足够的强度和刚度以承载整个船体，。
+    \item 气垫密封系统：确保形成的气垫不被外部空气迅速泄漏，维持气垫的压力和形状。
+    \item 推进系统：通常由舵机和螺旋桨组成，负责控制气垫船的方向和提供额外的推进力。
+    \end{enumerate} 
+
+\newpage
+
+\part{系统硬件选型及设计}
+\section{主控制器硬件设计}
+\subsection{主控制器硬件介绍}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.35]{./pic/mb.png}
+    \caption{主控制器硬件框图}
+    
+    \end{figure}
+\subsection{MCU 芯片选型}
+CH32V307 是一款基于32位 RISC-V 架构的高性能互联型微控制器，具备 144MHz 主频、硬件浮点运算和增强的中断响应能力。其特点包括64KB SRAM、256KB Flash、多种低功耗模式、丰富的外设接口（如8个串口、USB 2.0高速接口、千兆以太网）、高精度 ADC/DAC 转换以及支持 CAN、SDIO、IIC、SPI 等通信协议。该系列还内置了随机数发生器、安全调试接口，并提供LQFP64M、LQFP100等封装形式，适合物联网、工业控制等领域。
+\begin{figure}[h]
+    \centering
+    \subfigure[CH32V307 系统框图]{
+    \includegraphics[scale=0.24]{./pic/ch32v307.png} 
+    }
+    \quad
+    \subfigure[CH32V307 实物图]{
+    \includegraphics[scale=0.1]{./pic/ch32.jpg}  
+    }
+    \caption{CH32V307 微控制器}
+    \end{figure}
+
+\subsection{电源管理电路}
+电源管理电路是负责控制和调节电子设备中电源的分配与使用的关键部分，确保设备能够在各种工作环境下高效、稳定地运行。它通过精确调节电压、电流、功率等参数，不仅维持设备的正常工作状态，还能优化能耗、延长电池寿命，并保障系统在过压、过流或短路等极端情况下的安全。这种灵活而高效的电源管理在现代电子系统设计中不可或缺，是提升系统整体性能和用户体验的核心环节。为满足需要，本系统上存在3种供电电压：
+\begin{enumerate}[i)]
+    \item 电机供电使用航模锂电池，充满时电压在11.1V左右。
+    \item 部分数字器件使用直流5V，选用降压转换器 TPS5430。
+    \item 部分数字器件使用直流3.3V，选用线性稳压器 RT9013-33GB。
+    \end{enumerate} 
+
+\begin{figure}[h]
+    \centering
+    \subfigure[5v 供电电路]{
+    \includegraphics[scale=0.32]{./pic/5vpower.png} 
+    }
+    \quad
+    \subfigure[3.3v 供电电路]{
+    \includegraphics[scale=0.32]{./pic/3_3v.png} 
+    }
+    \caption{电源管理电路原理图}
+    \end{figure}
+其中，降压转换器 TPS5430 的输出电压$V_{\text{OUT}}$与反馈电阻满足如下关系式
+$$
+R_5=\frac{R_4\times 1.221}{V_{\text{OUT}}-1.221}
+$$
+
+\section{电子调速器硬件设计}
+\subsection{电子调速器硬件介绍}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/dt.png}
+    \caption{电子调速器硬件框图}
+    
+    \end{figure}
+\subsection{元器件选型}
+\subsubsection{MCU 芯片选型}
+主控选用 STC32G12K128-LQFP48 驱动无刷电机，这款单片机特点是主频最大可达 35MHz、两组8通道 PWM 通道、一个比较器，比较器输入端可以连接到ADC通道或者IO、宽范围工作电压 1.9 - 5.5v、UART 数量有4个。
+
+\begin{figure}[h]
+    \centering
+    \subfigure[STC32G12K128 系统框图]{
+    \includegraphics[scale=0.5]{./pic/stc32g.png} 
+    }
+    \quad
+    \subfigure[CH32V307 实物图]{
+    \includegraphics[scale=0.12]{./pic/stc32.jpg}  
+    }
+    \caption{STC32G12K128 微控制器}
+    \end{figure}
+\subsubsection{MOSFET 选型}
+由于单片机内部已经集成了比较器，因此外围器件选择主要就集中在了栅极驱动芯片、MOS管型号的选择上，MOS管我们选择的型号是 TPN2R703NL，这款 MOS 电流高达45A，10V的时候内阻低至2.2毫欧，开启电压低至2.3V左右，性价比较高。
+\subsubsection{栅极驱动芯片选型}
+栅极驱动芯片选用 FD6288Q，主要因为该芯片集成有三个独立半桥栅极驱动器，这样的高集成度减少了外部组件的数量，从而降低了故障风险。此外，FD6288Q支持高电压操作，具备高速开关特性，并且内置了过流保护、欠压锁定等保护机制，增强了系统的整体稳定性。
+
+\subsection{外围电路设计}
+\subsubsection{三相逆变电路}
+三相逆变器是一种将直流电转化为三相交流电的电力电子设备，广泛应用于电动机驱动、风力发电、光伏发电等场合。其核心工作原理是利用功率半导体器件（如IGBT、MOSFET等）的开关动作，通过脉宽调制（PWM）技术来控制输出电压和频率。三相逆变器输出的三相交流电具有相互错开120度的相位，能够为三相电动机或其他负载提供平稳的动力。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/tpn.png}
+    \caption{三相逆变电路原理图}
+    \end{figure}
+\subsubsection{栅极驱动电路}
+在无刷直流电机（BLDC）驱动器中，栅极驱动电路用于控制功率 MOSFET，驱动电机绕组电流。由于 MOSFET 栅极的电容较大，单靠 MCU 的输出驱动能力往往不足以在短时间内快速充电和放电。因此，栅极驱动电路能够提供足够的电流来快速切换功率器件，确保开关的快速导通和关断。另一方面，栅极驱动电路通常包括死区时间控制功能，在半桥或全桥电路中，确保了上下桥臂的开关不会同时导通，以避免直通现象导致的短路。
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/FD6288.png}
+    \caption{FD6288典型应用电路}
+    \end{figure}
+
+自举二极管$ D_{BS}$的作用是为自举电容提供充电路径，确保其在每个开关周期内都能够被有效充电，维持所需的电压水平。当低侧开关导通时，电流通过自举二极管流入电容，使其充电。选择自举二极管时，应考虑其反向击穿电压和反向恢复时间这两个关键参数。高反向击穿电压能够保证自举二极管在高侧开关导通时承受较高的电压应力，而短的反向恢复时间则能确保二极管在从正向导通到反向截止的过程中迅速切换。
+
+基于这些要求，设计中选择了B5819WS肖特基二极管，其40V的反向击穿电压和10ns的反向恢复时间能够在高频开关操作中提供良好的稳定性和可靠性。
+
+自举电容$ C_{BS}$则用于储存能量，并在高侧开关导通时为栅极驱动电路提供所需的电压。在半桥驱动电路中，自举电容通过自举二极管在低侧开关导通时充电，当高侧开关导通时，自举电容释放储存的电压，驱动高侧MOSFET的栅极。因此，自举电容的选择和设计对系统的正常运行也至关重要。
+
+依据FD6288Q数据手册，选择陶瓷电容并使用如下公式计算其容量。
+$$
+C_{BS}\ge 10\times \frac{Q_g}{Vcc-V_F}
+$$
+
+式中，$C_{BS}$为自举电容的容值，$Q_g$为 MOSFET 的栅极电荷，$Vcc$为 FD6288Q 的供电电压，$V_F$为自举二极管的正向压降值。
+
+根据计算的结果，考虑到自举电容如果选用的容值远大于计算结果，会增加电路的充放电时间，影响系统的响应速度和动态性能。如果选用的容值小于计算结果，则没有容量来存储足够的电荷，无法提供足够的瞬态响应，导致栅极驱动电压不足。最后选用了具有4.7$\mu F$容值、耐压50V的陶瓷电容，以确保在高频开关操作中的高可靠性和稳定性。
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/fd6288q.png}
+    \caption{栅极驱动电路原理图}
+    \end{figure}
+
+\subsubsection{反电动势过零检测电路}
+无刷直流电机通过电子控制器对定子绕组进行顺序激励，生成旋转磁场。这个旋转磁场与转子上的永磁体相互作用，产生电磁转矩，从而驱动转子旋转。为了确保电机能够平稳运行，电子控制器需要精确掌握转子的实时位置。只有在确认转子到达指定位置后，才能执行换相操作，以保持电机的平滑运转。转子位置检测常用有三种方式，基于电压的过零比较、霍尔传感器、磁编码器。
+
+我们采用低成本的过零比较检测，如图\ref{vvv}所示，电路通常由分压电路和比较电路组成。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/vvv.png}
+    \caption{反电动势过零检测电路原理图}
+    \label{vvv}
+    \end{figure}
+
+如图\ref{t1}所示, 是 BLDC 的定子三相绕组星形连接的等效电路图。因为BLDC三相线圈的公共点 ，即中性点 N 在电机内部没有引出, 不能直接测量得到中性点的电势 $ U_{N}$, 但是也可以构造虚拟中性点$ N'$来模拟真实中性点的电势.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/t1.png}
+    \caption{虚拟中性点示意图}
+    \label{t1}
+    \end{figure}
+
+根据KVL、KCL对 BLDC 三相绕组建立数学模型
+\begin{equation}
+    \left\{ \begin{array}{l}
+        U_A=I_AR+L\frac{\text{d}I_A}{\text{d}t}+E_A+U_N\\
+        U_B=I_BR+L\frac{\text{d}I_B}{\text{d}t}+E_B+U_N\\
+        U_C=I_CR+L\frac{\text{d}I_C}{\text{d}t}+E_C+U_N\\
+        I_A+I_B+I_C=0\\
+        E_A+E_B+E_C=0\\
+    \end{array} \right. \label{}
+    \end{equation}
+
+式中，$U_A$、$U_B$、$U_C$为三相绕组A、B、C三个极上的电势；$I_A$、$I_B$、$I_C$为三相绕组内的电流；$E_A$、$E_B$、$E_C$为三相绕组上的反电动势；$U_N$为三相绕组的公共点N的电动势。
+
+因为B相悬空的缘故有$I_B=0$，易知
+\begin{equation}
+    E_B=U_B-U_N \label{}
+    \end{equation}
+
+也就是说, 悬空相上的反电动势就是悬空相对应极 (端) 的电势减去中性点的电势。
+
+式(1)中第 5 个式子, 在悬空相反电动势过零时刻成立, 即此时反电动势之和为零。将式(1)中前三行式子两侧各自相加, 并考虑后两个式子, 得到悬空相反电动势过零时刻实际三相绕组中性点 N 的电势为
+\begin{equation}
+    U_A+U_B+U_C=3U_N \label{}
+    \end{equation}
+
+再对虚拟中性点用KCL、KVL列得
+\begin{equation}
+    \left\{ \begin{array}{l}
+        U_A=I'_AR+U_N'\\
+        U_B=I'_BR+U_N'\\
+        U_C=I'_CR+U_N'\\
+        I'_A+I'_B+I'_C=0\\
+    \end{array} \right. \label{}
+    \end{equation}
+
+对式(4)中前三式两侧相加, 得到虚拟中性点$ N'$的电势
+\begin{equation}
+    U_A+U_B+U_C=3U_N' \label{}
+    \end{equation}
+
+结合式(3)和式(5)得到
+\begin{equation}
+    U_N=U_N' \label{}
+    \end{equation}
+
+即\textbf{反电动势过零点时, 虚拟中性点与三相绕组中性点电压一致}。
+
+结合式(2)和式(6)，有$E_B = U_B-U_N'$。反电动势过零点时刻$ E_B=0$, 则只需要检测并验证下式是否成立即可。
+$$
+U_B\overset{\text{?}}{=}U_{N'}
+$$
+
+实际应用中，虚拟中性点的检测电路如图\ref{t2}所示。电路中, 分压以获得合适检测范围；滤波滤除尖峰、高次谐波。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.25]{./pic/t2.png}
+    \caption{过零检测电路示意图}
+    \label{t2}
+    \end{figure}
+
+\newpage
+
+\part{系统软件设计}
+\section{主控制器软件系统}
+\subsection{软件系统介绍}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/c2.png}
+    \caption{系统软件架构图}
+    \end{figure}
+
+\subsection{电机控制算法}
+\subsubsection{PID算法介绍}
+PID控制是工程实际中应用最为广泛的调节器控制方法。问世至今70多年来，它以其结构简单、稳定性好、工作可靠、调整方便而成为工业控制的主要技术之一。PID控制原理框图如图\ref{PID1}。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/pid1.png}
+    \caption{PID控制流图}
+    \label{PID1}
+    \end{figure}
+
+    反馈$e(t)$代表理想输入与实际输出的误差，这个误差信号被送到控制器，控制器算出误差信号的积分值和微分值，并将它们与原误差信号进行线性组合，得到输出量$u(t)$。
+$$
+u\left( t \right) =K_pe\left( t \right) +K_i\int_0^t{e\left( \tau \right) d\tau}+K_d\frac{\text{d}e\left( t \right)}{\text{d}t}
+$$
+
+其中，$K_p$、$K_i$ 、$K_d$分别称为比例系数、积分系数、微分系数。$u(t)$接着被送到了执行机构，这样就获得了新的输出信号，这个新的输出信号被再次送到感应器以发现新的误差信号，这个过程就这样周而复始地进行。
+数字控制系统中，PID控制器是通过计算机PID控制算法程序实现的。计算机直接数字控制系统大多数是采样-数据控制系统。进入计算机的连续-时间信号，必须经过采样和整量化后，变成数字量，方能进入计算机的存贮器和寄存器，而在数字计算机中的计算和处理，不论是积分还是微分，只能用数值计算去逼近。
+\subsubsection{行进电机控制}
+在本系统中，方向环使用了串级PID将角度环和角速度环串联起来，从而达到更高的响应速度和稳定性。其具体结构如图\ref{motor}。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/motor.png}
+    \caption{行进电机PID控制方案}
+    \label{motor}
+    \end{figure} 
+
+根据框图可以看出，外环角度环期望的图像偏差为0，实际的图像偏差是通过摄像头采集到的图像经过 MCU 处理和识别，寻线而得出的赛道中线。在直道的时候，角度环的输出接近于 0，而此时角速度环的输入量仅有陀螺仪角速度值。在直道的时候，内环的作用是抑制系统的转向。在弯道的时候，角度环的输出，当作角速度环的输入传入位置式 PID 系统，并与陀螺仪采集到的角速度值进行对比，经过计算达到期望角度环输出的角速度值，从而让系统更快，更稳的转向。另一方面，速度环对于角速度环来说，它是一个干扰量，会干扰系统的转向，所以对于干扰量就需要将其周期中断间隔设置较大。
+
+在位置式 PID 结构体 Pid 中，set\_point 为设定的期望目标，K\_p、K\_i、K\_d 分别为系统的比例、积分、微分系数，sum\_error 为累计误差和，last\_error 为上次误差，last\_2\_error 为上上次误差。
+
+在增量式 PID 结构体 PIDStruct 中，vi\_ref 为设定的期望目标速度，vi\_FeedBack 为编码器采集到的速度实际值，vi\_PreError 为速度误差值，vi\_PreDerror 为上一次速度误差之差，v\_Kp、v\_Ki、v\_Kd 分别为系统的比例、积分、微分系数，vl\_PreU 为系统输出值。
+\begin{figure}[h]
+    \centering
+    \subfigure[位置式PID结构体]{
+    \includegraphics[scale=1.1]{./pic/pidtypedef.png} 
+    }
+    \quad
+    \subfigure[速控（增量式）PID结构体]{
+    \includegraphics[scale=1]{./pic/pidstruct.png}  
+    }
+    \caption{离散化PID模型参量}
+    \end{figure}
+ 
+如图\ref{positionalpid}这个函数主要实现了位置式PID算法，用传入的目标值减去实际值得到误差值得到比例项，在对误差值进行累加得到积分项， 用本次误差减去上次的误差得到微分项，然后通过前面章节介绍的PID公式实现PID算法，并返回实际控制值。
+$$
+u\left( k \right) =K_perr\left( k \right) +K_i\sum{err\left( k \right) +K_d\left( err\left( k \right) -err\left( k-1 \right) \right)}
+$$
+
+这个公式就是代码第57行中的公式形式，公式和代码的计算方式基本一致，只不过在公式中第二项的Ki是使用的对误差积分， 在代码中变成了对误差的累加，虽然表达形式不一样，但是达到的效果和目的是一样的。计算过后将误差传递用于下一次使用，并将实际值返回。
+
+如图\ref{pidmove}这个函数主要实现了增量式PID算法，用传入速度的误差值减去上一次误差值得到比例项，在对误差值进行累加得到积分项， 用上一次速度的误差之差得到微分项，然后通过前面章节介绍的PID公式实现PID算法，并返回实际控制值。
+$$
+\varDelta u\left( k \right) =K_p\left[ err\left( k \right) -err\left( k-1 \right) \right] +K_ierr\left( k \right) +K_d\left[ err\left( k \right) -2err\left( k-1 \right) +err\left( k-2 \right) \right] 
+$$
+$$
+u\left( k \right) =u\left( k-1 \right) +\varDelta u\left( k \right) 
+$$
+
+% $$
+% \varDelta u\left( k \right) =K_p\left[ err\left( k \right) -err\left( k-1 \right) \right] +K_ierr\left( k \right) +K_d\left\{ \left[ err\left( k \right) -err\left( k-1 \right) \right] -\left[ err\left( k-1 \right) -err\left( k-2 \right) \right] \right\} 
+% $$
+% $$
+% u\left( k \right) =u\left( k-1 \right) +\varDelta u\left( k \right) 
+% $$
+
+这两个公式就是代码第193行中的公式形式，公式和代码的计算方式基本一致，可以看出增量式的PID是与近三次的误差有关； 虽然代码与公式的表达形式不一样，但是达到的效果和目的是一样的。计算过后将误差传递用于下一次使用，并将实际值返回。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.8]{./pic/positionalpid.png}
+    \caption{位置式PID函数实现}
+    \label{positionalpid}
+    \end{figure} 
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.68]{./pic/PIDmove.png}
+    \caption{速控（增量式）PID函数实现}
+    \label{pidmove}
+    \end{figure}   
+\subsubsection{横向电机控制}
+横向电机则通过图像的偏差进行位置式 PID 的计算，用来提供系统转向时所需要的向心力，就能实现更快更稳定的转向。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.35]{./pic/motorside.png}
+    \caption{横向电机PID控制方案}
+    \end{figure}
+\subsection{软件滤波器}
+\subsubsection{加权滑动平均滤波函数}
+加权滑动平均滤波算法是一种经典的滤波方法。其主要思路是对信号进行滑动窗口处理，窗口内的数据进行加权平均化，以得到平滑后的信号。这样可以有效地去除周期性噪声和高频噪声，同时保留信号的整体趋势。滑动平均滤波算法的实现如图\ref{slidingfilter}。
+$$
+\text{WMA}_t=\frac{\sum_{i=1}^n{w_i}X_{t+1-i}}{\sum_{i=1}^n{w_i}}
+$$
+式中，$X_t$为$t$时刻的观测值，$w_i$为第$i$个数据点的权重，$n$为滑动窗口的长度。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.7]{./pic/slidingfilter.png}
+    \caption{加权滑动平均滤波函数实现}
+    \label{slidingfilter}
+    \end{figure}
+\subsubsection{卡尔曼滤波函数}
+卡尔曼滤波（Kalman Filter）是一种用于估计动态系统状态的递归算法，广泛应用于信号处理、控制系统等领域。其基本思想是基于对系统状态的预测和观测数据进行最佳估计，并通过不断更新估计值来降低噪声的影响，从而得到更精确的系统状态。%，其实现如图\ref{kalman}所示。
+% \begin{figure}[htbp]
+%     \centering
+%     \subfigure[卡尔曼滤波函数]{
+%         \includegraphics[scale=0.6]{./pic/kalman1.png} 
+%         }
+%     \quad
+%     \subfigure[参量结构体]{
+%         \includegraphics[scale=0.7]{./pic/kalmanstruct.png}  
+%         }
+%     \caption{卡尔曼滤波函数实现}
+%     \label{kalman}
+%     \end{figure}
+
+卡尔曼滤波主要分为预测和更新两部分，需要构建系统的状态方程和观测方程，且已知系统的初始状态。在预测阶段，滤波器使用上一状态的估计，做出对当前状态的估计。在更新阶段，滤波器利用对当前状态的观测值优化在预测阶段获得的预测值，以获得一个更精确的新估计值。
+
+其预测和更新过程如下：
+$$
+\hat{X}_{k-1|k-1}\xrightarrow{Prediction}\hat{X}_{k|k-1}\xrightarrow{Correction}\hat{X}_{k|k}
+$$
+式中，$\hat{X}_{k|k-1}=E\left( X_k|Y_1,Y_2,\cdots ,Y_{k-1} \right)$表示已知过去$k-1$个时刻状态，在时刻$k$时的状态估计。
+
+在预测$\hat{X}_{k-1|k-1} \Rightarrow \hat{X}_{k|k-1}$步骤中，根据上一时刻的状态和控制量，预测当前时刻的状态。这个预测值是一个估计值，因为它还没有考虑当前时刻的观测值。预测值的误差协方差矩阵是通过上一时刻的误差协方差矩阵和系统噪声协方差矩阵计算得到的。
+$$
+\text{预测步骤：}\left\{ \begin{array}{l}
+	\boldsymbol{\hat{x}}_{k}^{-}=\boldsymbol{A\hat{x}}_{k-1}+\boldsymbol{Bu}_{k-1} \\
+	\boldsymbol{P}_{k}^{-}=\boldsymbol{AP}_{k-1}\boldsymbol{A}^T+\boldsymbol{Q}\\
+\end{array}\right. 
+$$
+式中，上标$``-"$代表先验；$\boldsymbol{\hat{x}}_{k}^{-}$为$k$时刻的先验状态估计；$\boldsymbol{\hat{x}}_{k-1}$代表$k-1$时刻的后验状态估计；$\boldsymbol{u}_{k-1}$为$k-1$时刻的输入向量；$\boldsymbol{A}$为状态矩阵；$\boldsymbol{B}$为输入矩阵；$\boldsymbol{P}_{k}^{-}$为$k$时刻的先验状态估计误差协方差矩阵；$\boldsymbol{P}_{k-1}$为$k-1$时刻的后验状态估计误差协方差矩阵；$\boldsymbol{Q}$为过程噪声协方差矩阵。
+
+在更新$\hat{X}_{k|k-1}\Rightarrow \hat{X}_{k|k}$步骤中，根据当前时刻的观测值和预测值，计算出当前时刻的状态估计值。这个估计值是一个更加准确的估计值，因为它已经考虑了当前时刻的观测值。状态估计值的误差协方差矩阵是通过预测步骤中计算得到的误差协方差矩阵、观测噪声协方差矩阵和卡尔曼增益计算得到的。
+$$
+\text{更新步骤：}\left\{ \begin{array}{l}
+	\boldsymbol{K}_k=\boldsymbol{P}_{k}^{-}\boldsymbol{H}_{m}^{T}(\boldsymbol{H}_m\boldsymbol{P}_{k}^{-}\boldsymbol{H}_{m}^{T}+\boldsymbol{R})^{-1}\\ 
+	\boldsymbol{\hat{x}}_k=\boldsymbol{\hat{x}}_{k}^{-}+\boldsymbol{K}_k\left( \boldsymbol{z}_k-\boldsymbol{H}_m\boldsymbol{\hat{x}}_{k}^{-} \right)\\
+	\boldsymbol{P}_k=\left( \boldsymbol{I}-\boldsymbol{K}_k\boldsymbol{H}_m \right) \boldsymbol{P}_{k}^{-}\\
+\end{array} \right. 
+$$
+式中，$\boldsymbol{K}_k$为k时刻的卡尔曼增益；$\boldsymbol{H}_m$为观测矩阵，下标$m$代表 measure；$\boldsymbol{R}$为测量噪声协方差矩阵；$\boldsymbol{z}_k$为$k$时刻的观测向量；$\boldsymbol{I}$为单位矩阵。
+
+现在，我们只关注解算 X 轴的角度，那么系统状态矩阵为
+$$
+\boldsymbol{X}=\left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] 
+$$
+式中，$\theta$为横滚角度；$\omega _b$为角速度漂移量，下标 b 即为 bias。  
+
+\textbf{第一步，计算先验状态估计：}
+
+在这个系统中，由于 IMU 不可避免的漂移，所以就必须从 IMU 的测量值$X_{Gyro}$上减去漂移量$\omega _b$得到实际的角速度值，再进行积分求角度$\theta$。对于漂移量$\omega _b$，我们认为同一个 IMU 的漂移每次都是一致的。于是有
+$$
+\theta _k =\theta _{k-1} +\left( X_{Gyro}-\omega _b \right) \text{d}t
+$$
+式中，$X_{Gyro}$为 IMU 采集到的测量角速度。
+
+将状态矩阵代入上式，进而得到系统先验状态估计方程
+$$
+\boldsymbol{\hat{x}}_{k}^{-}=\left[ \begin{array}{c}
+	\theta ^{-}\\
+	\omega _{b}^{-}\\
+\end{array} \right] =\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] _{\left[ k-1 \right]}+\left[ \begin{array}{c}
+	\text{d}t\\
+	0\\
+\end{array} \right]X_{Gyro}
+$$
+式中，下标$\left[ k-1 \right]$代表第$k-1$次的系统后验状态估计方程。
+
+\textbf{第二步，计算先验状态估计误差协方差矩阵:}
+
+由第一步先验状态估计，有状态向量
+$$
+\boldsymbol{A}=\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] 
+$$
+由于 IMU 的角度漂移噪声和角速度漂移噪声相互独立，则测量噪声协方差矩阵$\boldsymbol{Q}$有
+$$
+\boldsymbol{Q}=\left[ \begin{matrix}
+	\text{Cov}\left( \theta ,\theta \right)&		\text{Cov}\left( \omega _b,\theta \right)\\
+	\text{Cov}\left( \theta ,\omega _b \right)&		\text{Cov}\left( \omega _b,\omega _b \right)\\
+\end{matrix} \right] =\left[ \begin{matrix}
+	Q_{\theta}&		0\\
+	0&		Q_b\\
+\end{matrix} \right] 
+$$
+将$\boldsymbol{A}$和$\boldsymbol{Q}$代入式中有
+$$
+\boldsymbol{P}_{k}^{-}=\left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] =\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] \left[ \begin{matrix}
+	P_{00\left[ k-1 \right]}&		P_{01\left[ k-1 \right]}\\
+	P_{10\left[ k-1 \right]}&		P_{11\left[ k-1 \right]}\\
+\end{matrix} \right] \left[ \begin{matrix}
+	1&		0\\
+	-\text{d}t&		1\\
+\end{matrix} \right] +\left[ \begin{matrix}
+	Q_{\theta}&		0\\
+	0&		Q_b\\
+\end{matrix} \right] 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	P_{00}^{-}=P_{00\left[ k-1 \right]}+Q_{\theta}-\left( P_{01\left[ k-1 \right]}-P_{10\left[ k-1 \right]} \right) \text{d}t+\cancel{P_{11\left[ k-1 \right]}\text{d}t^2}\\
+	P_{01}^{-}=P_{00\left[ k-1 \right]}-P_{11\left[ k-1 \right]}\text{d}t\\
+	P_{10}^{-}=P_{10\left[ k-1 \right]}-P_{11\left[ k-1 \right]}\text{d}t\\
+	P_{11}^{-}=P_{11\left[ k-1 \right]}+Q_b\\
+\end{array} \right. 
+$$
+由于$\text{d}t^2$是高阶小量，故可以忽略$P_{11\left[ k-1 \right]}\text{d}t^2$项以减少计算时间。
+
+\textbf{第三步，计算卡尔曼增益矩阵：}
+
+将$\boldsymbol{P}_{k}^{-}$和$\boldsymbol{H}_m=\left[ \begin{matrix}1&0\\\end{matrix} \right] ^T$代入式中，有
+$$
+\boldsymbol{K}_k=\left[ \begin{array}{c}
+	K_{0}\\
+	K_{1}\\
+\end{array} \right] =\frac{\left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	1\\
+	0\\
+\end{array} \right]}{\left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	1\\
+	0\\
+\end{array} \right] +R_{\theta}}
+$$
+式中$R_{\theta}$为角度测量噪声，一般为常数。
+
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	K_{0}=P_{00}^{-}(P_{00}^{-}+R_{\theta})^{-1}\\
+	K_{1}=P_{10}^{-}(P_{00}^{-}+R_{\theta})^{-1}\\
+\end{array} \right. 
+$$
+
+\textbf{第四步，更新后验状态估计：}
+
+将$\boldsymbol{x}_{k}^{-}$、$\boldsymbol{H}_m$、$\boldsymbol{K}_k$和$\boldsymbol{z}_k = \theta _{new}$代入式中，有
+$$
+\boldsymbol{\hat{x}}_k=\left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] =\left[ \begin{array}{c}
+	\theta ^-\\
+	\omega _{b}^{-}\\
+\end{array} \right] +\left[ \begin{array}{c}
+	K_0\\
+	K_1\\
+\end{array} \right] \left( \theta _{new}-\left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	\theta ^-\\
+	\omega _{b}^{-}\\
+\end{array} \right] \right) 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	\theta =\theta ^-+K_0\left( \theta _{new}-\theta ^- \right)\\
+	\omega _b=\omega _{b}^{-}+K_1\left( \theta _{new}-\theta ^- \right)\\
+\end{array} \right. 
+$$
+
+\textbf{第五步，更新后验状态估计误差协方差矩阵：}
+
+将$\boldsymbol{P}_{k}^{-}$、$\boldsymbol{H}_m$和$\boldsymbol{K}_k$代入式中，有
+$$
+\boldsymbol{P}_k=\left[ \begin{matrix}
+	P_{00}&		P_{01}\\
+	P_{10}&		P_{11}\\
+\end{matrix} \right] =\left( \left[ \begin{matrix}
+	1&		0\\
+	0&		1\\
+\end{matrix} \right] -\left[ \begin{array}{c}
+	K_{0}\\
+	K_{1}\\
+\end{array} \right] \left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \right) \left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	P_{00}=P_{00}^{-}-K_0P_{00}^{-}\\
+	P_{01}=P_{01}^{-}-K_0P_{01}^{-}\\
+	P_{10}=P_{10}^{-}-K_1P_{10}^{-}\\
+	P_{11}=P_{11}^{-}-K_1P_{11}^{-}\\
+\end{array} \right. 
+$$
+
+到这里为止，最后计算得出的后验状态估计误差协方差矩阵$\boldsymbol{P}_k$为下一循环的卡尔曼滤波做准备。
+\section{电子调速器软件系统}
+\subsection{软件系统介绍}
+无感无刷电调软件系统的核心功能是通过预定的算法实现对电机转子位置和速度的实时估算，从而在没有物理传感器的情况下进行高精度的电机控制，能够在保持电机运行稳定性的同时，实现高效、低能耗的控制。该控制通常依赖于反电势过零检测技术。通过检测绕组上的反电势信号的零点位置来确定转子的位置，并生成相应的 PWM 信号来调节电机的转速、方向以及输出扭矩。
+
+为了实现无感无刷电机的平稳启动，尤其是在低速或静止状态下，软件系统也集成了启动算法。启动阶段结束后，系统会逐渐切换到基于反电势的控制模式，实现更高效的运行。此外，该系统也配备了通信接口模块，PPM、UART，用于接收外部控制命令。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/c1.png}
+    \caption{系统软件架构图}
+    \end{figure}
+
+\subsection{系统初始化}
+系统启动初期，主函数先对 STC32G 芯片的各个外设模块，如定时器、比较器、PWM、ADC 等进行初始化配置，以确保系统的正常运行。同时，对软件资源，如变量初始化、PWM 占空比默认值、电机死区设置等进行默认处理，确保系统运行时的数据一致性，以避免在 H 桥驱动电机时出现上下桥臂同时导通的情况，确保电机的安全运行。此外，其他如中断优先级的设置、串口通信的初始化等，都在系统启动的初期得到合理配置，为后续系统的稳定运行奠定基础。
+%在系统启动初期，主函数首先对 STC32G 芯片的各个外设模块进行全面的初始化配置，以确保系统的正常运行。具体来说，定时器的初始化配置用于精确控制任务的时间调度和系统事件的定时触发；比较器的设置确保信号的实时比较和电平检测；ADC的配置则用于采集电压模拟信号并转换为数字数据；PWM 的初始化则为电机控制和其他负载控制提供所需的信号输出。在这些外设初始化的同时，主函数还对系统中的软件资源进行配置。例如，对全局和局部变量进行初始化，确保系统运行时的数据一致性；对PWM的占空比进行默认值设置，保证启动时电机或其他控制设备处于合理的工作状态；同时，还根据电机特性对死区时间进行配置，以避免在H桥驱动电机时出现上下桥臂同时导通的情况，确保电机的安全运行。此外，其他如中断优先级的设置、串口通信的初始化等，都在系统启动的初期得到合理配置，为后续系统的稳定运行奠定基础。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.21]{./pic/init1.png}
+    \caption{电调初始化流程图}
+    \label{init1}
+    \end{figure}
+\subsection{状态控制与指示}
+周期中断以每 50us 的固定频率运行，主要负责电机的启动运行、停止、故障等信息，方便用户实时了解系统的运行情况；另一方面，周期中断承担着电机启动、停止以及堵转检测等关键任务。在电机启动过程中，它按照预定的启动流程和时序，协调各个模块之间的工作，确保电机能够平稳、顺利地启动。同时，通过对电机运行状态的实时监测，一旦检测到电机出现堵转情况，能够迅速停止电机运转，并发出故障报警信号。此外，周期中断还肩负着电池低电压保护的重要职责。通过对电池电压的实时监测和分析，当检测到电池电压低于设定的安全阈值时，立即停止电机运行，以保护电池免受过度放电的损害。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.19]{./pic/state1.png}
+    \caption{电调状态控制流程图}
+    \label{state1}
+    \end{figure}
+\subsection{PPM 编解码}
+脉冲位置调制（Pulse Position Modulation，PPM）的原理是通过编码产生脉 冲信号，然后对基带信号进行调制，也就是将信号信息附加到 PPM 脉冲信号上， 调制信号决定载波脉冲的时间。这是遥控模型中比较通用的一种信号格式，PPM 解码原理是通过检测给定频率的 PWM 信号的占空比来获取指令信号。其原理见图\ref{ppm1}，信号频率为50Hz，一个周期为20ms。对于电调来讲，脉宽为1ms表示停转，脉宽为2ms表示满油门运转，其间的各点按比例换算：比如脉宽为1.5ms就表示50\%油门等等。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/ppm1.png}
+    \caption{PPM信号图解}
+    \label{ppm1}
+    \end{figure}
+
+在如图\ref{ppm2}的 PWMB 中断服务程序中，系统专注于高效处理电调输入信号，确保对电机控制信号的实时响应。通过精确测量输入信号的高电平持续时间以及整个周期时间，能够准确地计算出油门信号的变化情况，进而获取油门大小信息。具体来说，当接收到PWM信号时，中断服务程序会首先记录信号的上升沿和下降沿，计算高电平时间和整个周期时间。根据这些数据，系统能够确定油门信号的占空比，从而准确反映电调输入的油门大小。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.45]{./pic/ppm2.png}
+    \caption{电调油门控制流程图}
+    \label{ppm2}
+    \end{figure}
+
+\subsection{六步换相法}
+六步换相法的基本思想是通过顺序地给电机的三相绕组施加电压，使得电流方向在电机的三个绕组中不断变化，从而产生旋转磁场，驱动电机转动。具体来说，电机的转动是通过控制绕组的电流变化来实现的。每当一个绕组的电流达到最大值后，电流方向被切换到下一个绕组，这样就能形成一个不断旋转的磁场，使得电机的转子随着外部的磁场变化而转动。
+
+其将每个电机周期分为六个步骤，如图\ref{liubu}。每个步骤通过激活两个绕组（一个绕组为高电平，另一个为低电平）并关闭第三个绕组来产生磁场。在这些步骤中，电流的变化顺序按照特定的逻辑进行，以确保电流在各个绕组之间的顺序变化，保持电机的平稳转动。通过这种方法，电机每转一圈，换相就会进行六次，从而实现无刷电机的平稳运行。
+\begin{figure}[h]
+     \centering
+    \subfigure[A、C相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu1.png} 
+    }
+    \quad
+    \subfigure[A、B相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu2.png}  
+    }
+    \subfigure[C、B相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu3.png} 
+    }
+    \quad
+    \subfigure[C、A相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu4.png}  
+    }
+    \subfigure[B、A相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu5.png} 
+    }
+    \quad
+    \subfigure[B、C相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu6.png}  
+    }
+    \caption{六步换相法图解}
+    \label{liubu}
+    \end{figure}
+
+电机的换相过程是无刷直流电机驱动控制的核心，定时器 0 中断通过定时触发，按照电机运行的时序，根据=转子位置和预设的换相策略，按顺序切换定子的电流方向，精确控制每次换相的时机，从而驱动无刷电机旋转。
+
+此外，定时器 0 中断还负责电机的消磁处理，如图\ref{xxx}。消磁过程是为了防止电机在运行过程中出现过剩的磁场，减少电磁损耗和热量积累，保护电机的运行效率与寿命。通常，在每次换相完成后，为了消除定子绕组中的剩余磁场，需要进行一定的延时处理。
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[scale=0.15]{./pic/xxx.png}
+%     \caption{无刷电机消磁事件}
+%     \label{xxx}
+%     \end{figure}    
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.2]{./pic/timer0.png}
+    \caption{电调六步换相流程图}
+    \label{timer0}
+    \end{figure}
+
+\newpage
+
+\part{总结}
+%\section{系统测试}
+
+\section{总结与展望}
+\subsection{感想总结}
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{{\color[HTML]{000000} \textbf{毕业要求}}}                             & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{课程对应毕业要求指标点}}}                                                                                      \\ \hline
+    {\color[HTML]{000000} \textbf{\begin{tabular}[c]{@{}l@{}}3.设计/\\ 开发解决方案\end{tabular}}} & \cellcolor[HTML]{FFFFFF}{\color[HTML]{000000} \begin{tabular}[c]{@{}l@{}}3-2 能够针对特定指标需求，设计并实现功能完整的硬件和软件\\ 系统，包括整体架构设计、各模块交互和数据通信等（系统设计）\end{tabular}} \\ \hline
+    {\color[HTML]{000000} \textbf{4. 研究}}                                                  & \cellcolor[HTML]{FFFFFF}{\color[HTML]{000000} \begin{tabular}[c]{@{}l@{}}4-2 能够根据方案，运用实验工具、仪器，开展实验，对实验\\ 结果进行分析与解释，并通过信息综合得到合理有效的结论\end{tabular}}     \\ \hline
+    {\color[HTML]{000000} \textbf{10.沟通}}                                                  & {\color[HTML]{000000} \begin{tabular}[c]{@{}l@{}}10-1能够就电子信息工程领域的复杂工程问题撰写报告，设计文稿，\\ 并具有较好的语言表达和沟通能力，能够清晰陈述观点和回答问题\end{tabular}}                       \\ \hline
+    \end{tabular}
+    \end{table}
+在参与整个项目的过程中，我深刻体会到了团队合作、技术创新以及工程实践的重要性。作为一项综合性极强的嵌入式系统设计扩充，该项目不仅需要扎实的理论基础，还需要高效的实践和调试能力。在设计与制作过程中，我学到了如何将传感器、嵌入式控制、电机驱动等技术结合在一起，解决实际问题。
+
+在构建项目的过程中，我们面临了不少挑战。首先是如何平衡系统的稳定和速度。为了实现这一目标，我们反复调试气垫系统的气压分布以及行进电机的角度和功率，通过不断的试验找到了最优配置。其次，为了让气垫船能够在赛道上平稳前进并快速完成任务，我们采用了多级 PID 控制算法来调整船体姿态，同时通过卡尔曼滤波算法对传感器实时采集系统的位置信息进行数据处理，确保路径规划和导航的准确性。
+
+该系统的设计和调试不仅让我提升了动手实践和编程调试的能力，也增强了我对多学科融合技术的理解与应用。竞赛和课程中的每一次挑战和收获，都是宝贵的经验。最重要的是，这次经历让我更加坚定了继续探索智能控制技术和创新设计的决心。
+\subsection{改进展望}
+在硬件层面，可以对无刷电机过零检测电路中的 C25、C26、C27 三颗滤波电容作移除处理。这三颗电容是用来滤除采集三点的高频分量的，但可能导致过零信号滞后，进而引发电机换相问题。
+
+在软件层面，无刷电机启动直接采用了强拉换相方式。未来可以引入更为先进的正弦启动模式。通过使电机柔和地转动 360 度电角度后再切换至开环转动检测，可以极大地优化了启动过程，不仅能够降低启动冲击，还能显著提高了反电动势的检测精度，为电机的平稳运行奠定良好开端。
+
+\newpage
+
+\appendix
+\section{主控制器硬件原理图}
+\begin{figure}[htbp]
+    \centering
+    \subfigure[]{
+    \includegraphics[scale=0.27]{./pic/CH32V307_1.png} 
+    }
+    \quad
+    \subfigure[]{
+    \includegraphics[scale=0.27]{./pic/CH32V307_2.png}  
+    }
+    \subfigure[]{
+    \includegraphics[scale=0.27]{./pic/CH32V307_3.png} 
+    }
+    \caption{主控制器硬件原理图}
+\end{figure}
+
+\newpage
+
+\section{电子调速器硬件原理图}
+\begin{figure}[h]
+    \centering
+    \subfigure[]{
+    \includegraphics[scale=0.35]{./pic/CH32V203_1.png} 
+    }
+    \quad
+    \subfigure[]{
+    \includegraphics[scale=0.35]{./pic/CH32V203_2.png}  
+    }
+    \caption{电子调速器硬件原理图}
+\end{figure}
+\end{document}
