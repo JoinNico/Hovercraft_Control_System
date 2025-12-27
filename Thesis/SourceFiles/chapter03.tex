@@ -1,0 +1,419 @@
+\part{系统软件设计}
+\section{主控制器软件系统}
+\subsection{软件系统介绍}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/c2.png}
+    \caption{系统软件架构图}
+    \end{figure}
+
+\subsection{电机控制算法}
+\subsubsection{PID算法介绍}
+PID控制是工程实际中应用最为广泛的调节器控制方法。问世至今70多年来，它以其结构简单、稳定性好、工作可靠、调整方便而成为工业控制的主要技术之一。PID控制原理框图如图\ref{PID1}。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/pid1.png}
+    \caption{PID控制流图}
+    \label{PID1}
+    \end{figure}
+
+    反馈$e(t)$代表理想输入与实际输出的误差，这个误差信号被送到控制器，控制器算出误差信号的积分值和微分值，并将它们与原误差信号进行线性组合，得到输出量$u(t)$。
+$$
+u\left( t \right) =K_pe\left( t \right) +K_i\int_0^t{e\left( \tau \right) d\tau}+K_d\frac{\text{d}e\left( t \right)}{\text{d}t}
+$$
+
+其中，$K_p$、$K_i$ 、$K_d$分别称为比例系数、积分系数、微分系数。$u(t)$接着被送到了执行机构，这样就获得了新的输出信号，这个新的输出信号被再次送到感应器以发现新的误差信号，这个过程就这样周而复始地进行。
+数字控制系统中，PID控制器是通过计算机PID控制算法程序实现的。计算机直接数字控制系统大多数是采样-数据控制系统。进入计算机的连续-时间信号，必须经过采样和整量化后，变成数字量，方能进入计算机的存贮器和寄存器，而在数字计算机中的计算和处理，不论是积分还是微分，只能用数值计算去逼近。
+\subsubsection{行进电机控制}
+在本系统中，方向环使用了串级PID将角度环和角速度环串联起来，从而达到更高的响应速度和稳定性。其具体结构如图\ref{motor}。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/motor.png}
+    \caption{行进电机PID控制方案}
+    \label{motor}
+    \end{figure} 
+
+根据框图可以看出，外环角度环期望的图像偏差为0，实际的图像偏差是通过摄像头采集到的图像经过 MCU 处理和识别，寻线而得出的赛道中线。在直道的时候，角度环的输出接近于 0，而此时角速度环的输入量仅有陀螺仪角速度值。在直道的时候，内环的作用是抑制系统的转向。在弯道的时候，角度环的输出，当作角速度环的输入传入位置式 PID 系统，并与陀螺仪采集到的角速度值进行对比，经过计算达到期望角度环输出的角速度值，从而让系统更快，更稳的转向。另一方面，速度环对于角速度环来说，它是一个干扰量，会干扰系统的转向，所以对于干扰量就需要将其周期中断间隔设置较大。
+
+在位置式 PID 结构体 Pid 中，set\_point 为设定的期望目标，K\_p、K\_i、K\_d 分别为系统的比例、积分、微分系数，sum\_error 为累计误差和，last\_error 为上次误差，last\_2\_error 为上上次误差。
+
+在增量式 PID 结构体 PIDStruct 中，vi\_ref 为设定的期望目标速度，vi\_FeedBack 为编码器采集到的速度实际值，vi\_PreError 为速度误差值，vi\_PreDerror 为上一次速度误差之差，v\_Kp、v\_Ki、v\_Kd 分别为系统的比例、积分、微分系数，vl\_PreU 为系统输出值。
+\begin{figure}[h]
+    \centering
+    \subfigure[位置式PID结构体]{
+    \includegraphics[scale=1.1]{./pic/pidtypedef.png} 
+    }
+    \quad
+    \subfigure[速控（增量式）PID结构体]{
+    \includegraphics[scale=1]{./pic/pidstruct.png}  
+    }
+    \caption{离散化PID模型参量}
+    \end{figure}
+ 
+如图\ref{positionalpid}这个函数主要实现了位置式PID算法，用传入的目标值减去实际值得到误差值得到比例项，在对误差值进行累加得到积分项， 用本次误差减去上次的误差得到微分项，然后通过前面章节介绍的PID公式实现PID算法，并返回实际控制值。
+$$
+u\left( k \right) =K_perr\left( k \right) +K_i\sum{err\left( k \right) +K_d\left( err\left( k \right) -err\left( k-1 \right) \right)}
+$$
+
+这个公式就是代码第57行中的公式形式，公式和代码的计算方式基本一致，只不过在公式中第二项的Ki是使用的对误差积分， 在代码中变成了对误差的累加，虽然表达形式不一样，但是达到的效果和目的是一样的。计算过后将误差传递用于下一次使用，并将实际值返回。
+
+如图\ref{pidmove}这个函数主要实现了增量式PID算法，用传入速度的误差值减去上一次误差值得到比例项，在对误差值进行累加得到积分项， 用上一次速度的误差之差得到微分项，然后通过前面章节介绍的PID公式实现PID算法，并返回实际控制值。
+$$
+\varDelta u\left( k \right) =K_p\left[ err\left( k \right) -err\left( k-1 \right) \right] +K_ierr\left( k \right) +K_d\left[ err\left( k \right) -2err\left( k-1 \right) +err\left( k-2 \right) \right] 
+$$
+$$
+u\left( k \right) =u\left( k-1 \right) +\varDelta u\left( k \right) 
+$$
+
+% $$
+% \varDelta u\left( k \right) =K_p\left[ err\left( k \right) -err\left( k-1 \right) \right] +K_ierr\left( k \right) +K_d\left\{ \left[ err\left( k \right) -err\left( k-1 \right) \right] -\left[ err\left( k-1 \right) -err\left( k-2 \right) \right] \right\} 
+% $$
+% $$
+% u\left( k \right) =u\left( k-1 \right) +\varDelta u\left( k \right) 
+% $$
+
+这两个公式就是代码第193行中的公式形式，公式和代码的计算方式基本一致，可以看出增量式的PID是与近三次的误差有关； 虽然代码与公式的表达形式不一样，但是达到的效果和目的是一样的。计算过后将误差传递用于下一次使用，并将实际值返回。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.8]{./pic/positionalpid.png}
+    \caption{位置式PID函数实现}
+    \label{positionalpid}
+    \end{figure} 
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.68]{./pic/PIDmove.png}
+    \caption{速控（增量式）PID函数实现}
+    \label{pidmove}
+    \end{figure}   
+\subsubsection{横向电机控制}
+横向电机则通过图像的偏差进行位置式 PID 的计算，用来提供系统转向时所需要的向心力，就能实现更快更稳定的转向。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.35]{./pic/motorside.png}
+    \caption{横向电机PID控制方案}
+    \end{figure}
+\subsection{软件滤波器}
+\subsubsection{加权滑动平均滤波函数}
+加权滑动平均滤波算法是一种经典的滤波方法。其主要思路是对信号进行滑动窗口处理，窗口内的数据进行加权平均化，以得到平滑后的信号。这样可以有效地去除周期性噪声和高频噪声，同时保留信号的整体趋势。滑动平均滤波算法的实现如图\ref{slidingfilter}。
+$$
+\text{WMA}_t=\frac{\sum_{i=1}^n{w_i}X_{t+1-i}}{\sum_{i=1}^n{w_i}}
+$$
+式中，$X_t$为$t$时刻的观测值，$w_i$为第$i$个数据点的权重，$n$为滑动窗口的长度。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.7]{./pic/slidingfilter.png}
+    \caption{加权滑动平均滤波函数实现}
+    \label{slidingfilter}
+    \end{figure}
+\subsubsection{卡尔曼滤波函数}
+卡尔曼滤波（Kalman Filter）是一种用于估计动态系统状态的递归算法，广泛应用于信号处理、控制系统等领域。其基本思想是基于对系统状态的预测和观测数据进行最佳估计，并通过不断更新估计值来降低噪声的影响，从而得到更精确的系统状态。%，其实现如图\ref{kalman}所示。
+% \begin{figure}[htbp]
+%     \centering
+%     \subfigure[卡尔曼滤波函数]{
+%         \includegraphics[scale=0.6]{./pic/kalman1.png} 
+%         }
+%     \quad
+%     \subfigure[参量结构体]{
+%         \includegraphics[scale=0.7]{./pic/kalmanstruct.png}  
+%         }
+%     \caption{卡尔曼滤波函数实现}
+%     \label{kalman}
+%     \end{figure}
+
+卡尔曼滤波主要分为预测和更新两部分，需要构建系统的状态方程和观测方程，且已知系统的初始状态。在预测阶段，滤波器使用上一状态的估计，做出对当前状态的估计。在更新阶段，滤波器利用对当前状态的观测值优化在预测阶段获得的预测值，以获得一个更精确的新估计值。
+
+其预测和更新过程如下：
+$$
+\hat{X}_{k-1|k-1}\xrightarrow{Prediction}\hat{X}_{k|k-1}\xrightarrow{Correction}\hat{X}_{k|k}
+$$
+式中，$\hat{X}_{k|k-1}=E\left( X_k|Y_1,Y_2,\cdots ,Y_{k-1} \right)$表示已知过去$k-1$个时刻状态，在时刻$k$时的状态估计。
+
+在预测$\hat{X}_{k-1|k-1} \Rightarrow \hat{X}_{k|k-1}$步骤中，根据上一时刻的状态和控制量，预测当前时刻的状态。这个预测值是一个估计值，因为它还没有考虑当前时刻的观测值。预测值的误差协方差矩阵是通过上一时刻的误差协方差矩阵和系统噪声协方差矩阵计算得到的。
+$$
+\text{预测步骤：}\left\{ \begin{array}{l}
+	\boldsymbol{\hat{x}}_{k}^{-}=\boldsymbol{A\hat{x}}_{k-1}+\boldsymbol{Bu}_{k-1} \\
+	\boldsymbol{P}_{k}^{-}=\boldsymbol{AP}_{k-1}\boldsymbol{A}^T+\boldsymbol{Q}\\
+\end{array}\right. 
+$$
+式中，上标$``-"$代表先验；$\boldsymbol{\hat{x}}_{k}^{-}$为$k$时刻的先验状态估计；$\boldsymbol{\hat{x}}_{k-1}$代表$k-1$时刻的后验状态估计；$\boldsymbol{u}_{k-1}$为$k-1$时刻的输入向量；$\boldsymbol{A}$为状态矩阵；$\boldsymbol{B}$为输入矩阵；$\boldsymbol{P}_{k}^{-}$为$k$时刻的先验状态估计误差协方差矩阵；$\boldsymbol{P}_{k-1}$为$k-1$时刻的后验状态估计误差协方差矩阵；$\boldsymbol{Q}$为过程噪声协方差矩阵。
+
+在更新$\hat{X}_{k|k-1}\Rightarrow \hat{X}_{k|k}$步骤中，根据当前时刻的观测值和预测值，计算出当前时刻的状态估计值。这个估计值是一个更加准确的估计值，因为它已经考虑了当前时刻的观测值。状态估计值的误差协方差矩阵是通过预测步骤中计算得到的误差协方差矩阵、观测噪声协方差矩阵和卡尔曼增益计算得到的。
+$$
+\text{更新步骤：}\left\{ \begin{array}{l}
+	\boldsymbol{K}_k=\boldsymbol{P}_{k}^{-}\boldsymbol{H}_{m}^{T}(\boldsymbol{H}_m\boldsymbol{P}_{k}^{-}\boldsymbol{H}_{m}^{T}+\boldsymbol{R})^{-1}\\ 
+	\boldsymbol{\hat{x}}_k=\boldsymbol{\hat{x}}_{k}^{-}+\boldsymbol{K}_k\left( \boldsymbol{z}_k-\boldsymbol{H}_m\boldsymbol{\hat{x}}_{k}^{-} \right)\\
+	\boldsymbol{P}_k=\left( \boldsymbol{I}-\boldsymbol{K}_k\boldsymbol{H}_m \right) \boldsymbol{P}_{k}^{-}\\
+\end{array} \right. 
+$$
+式中，$\boldsymbol{K}_k$为k时刻的卡尔曼增益；$\boldsymbol{H}_m$为观测矩阵，下标$m$代表 measure；$\boldsymbol{R}$为测量噪声协方差矩阵；$\boldsymbol{z}_k$为$k$时刻的观测向量；$\boldsymbol{I}$为单位矩阵。
+
+现在，我们只关注解算 X 轴的角度，那么系统状态矩阵为
+$$
+\boldsymbol{X}=\left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] 
+$$
+式中，$\theta$为横滚角度；$\omega _b$为角速度漂移量，下标 b 即为 bias。  
+
+\textbf{第一步，计算先验状态估计：}
+
+在这个系统中，由于 IMU 不可避免的漂移，所以就必须从 IMU 的测量值$X_{Gyro}$上减去漂移量$\omega _b$得到实际的角速度值，再进行积分求角度$\theta$。对于漂移量$\omega _b$，我们认为同一个 IMU 的漂移每次都是一致的。于是有
+$$
+\theta _k =\theta _{k-1} +\left( X_{Gyro}-\omega _b \right) \text{d}t
+$$
+式中，$X_{Gyro}$为 IMU 采集到的测量角速度。
+
+将状态矩阵代入上式，进而得到系统先验状态估计方程
+$$
+\boldsymbol{\hat{x}}_{k}^{-}=\left[ \begin{array}{c}
+	\theta ^{-}\\
+	\omega _{b}^{-}\\
+\end{array} \right] =\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] _{\left[ k-1 \right]}+\left[ \begin{array}{c}
+	\text{d}t\\
+	0\\
+\end{array} \right]X_{Gyro}
+$$
+式中，下标$\left[ k-1 \right]$代表第$k-1$次的系统后验状态估计方程。
+
+\textbf{第二步，计算先验状态估计误差协方差矩阵:}
+
+由第一步先验状态估计，有状态向量
+$$
+\boldsymbol{A}=\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] 
+$$
+由于 IMU 的角度漂移噪声和角速度漂移噪声相互独立，则测量噪声协方差矩阵$\boldsymbol{Q}$有
+$$
+\boldsymbol{Q}=\left[ \begin{matrix}
+	\text{Cov}\left( \theta ,\theta \right)&		\text{Cov}\left( \omega _b,\theta \right)\\
+	\text{Cov}\left( \theta ,\omega _b \right)&		\text{Cov}\left( \omega _b,\omega _b \right)\\
+\end{matrix} \right] =\left[ \begin{matrix}
+	Q_{\theta}&		0\\
+	0&		Q_b\\
+\end{matrix} \right] 
+$$
+将$\boldsymbol{A}$和$\boldsymbol{Q}$代入式中有
+$$
+\boldsymbol{P}_{k}^{-}=\left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] =\left[ \begin{matrix}
+	1&		-\text{d}t\\
+	0&		1\\
+\end{matrix} \right] \left[ \begin{matrix}
+	P_{00\left[ k-1 \right]}&		P_{01\left[ k-1 \right]}\\
+	P_{10\left[ k-1 \right]}&		P_{11\left[ k-1 \right]}\\
+\end{matrix} \right] \left[ \begin{matrix}
+	1&		0\\
+	-\text{d}t&		1\\
+\end{matrix} \right] +\left[ \begin{matrix}
+	Q_{\theta}&		0\\
+	0&		Q_b\\
+\end{matrix} \right] 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	P_{00}^{-}=P_{00\left[ k-1 \right]}+Q_{\theta}-\left( P_{01\left[ k-1 \right]}-P_{10\left[ k-1 \right]} \right) \text{d}t+\cancel{P_{11\left[ k-1 \right]}\text{d}t^2}\\
+	P_{01}^{-}=P_{00\left[ k-1 \right]}-P_{11\left[ k-1 \right]}\text{d}t\\
+	P_{10}^{-}=P_{10\left[ k-1 \right]}-P_{11\left[ k-1 \right]}\text{d}t\\
+	P_{11}^{-}=P_{11\left[ k-1 \right]}+Q_b\\
+\end{array} \right. 
+$$
+由于$\text{d}t^2$是高阶小量，故可以忽略$P_{11\left[ k-1 \right]}\text{d}t^2$项以减少计算时间。
+
+\textbf{第三步，计算卡尔曼增益矩阵：}
+
+将$\boldsymbol{P}_{k}^{-}$和$\boldsymbol{H}_m=\left[ \begin{matrix}1&0\\\end{matrix} \right] ^T$代入式中，有
+$$
+\boldsymbol{K}_k=\left[ \begin{array}{c}
+	K_{0}\\
+	K_{1}\\
+\end{array} \right] =\frac{\left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	1\\
+	0\\
+\end{array} \right]}{\left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	1\\
+	0\\
+\end{array} \right] +R_{\theta}}
+$$
+式中$R_{\theta}$为角度测量噪声，一般为常数。
+
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	K_{0}=P_{00}^{-}(P_{00}^{-}+R_{\theta})^{-1}\\
+	K_{1}=P_{10}^{-}(P_{00}^{-}+R_{\theta})^{-1}\\
+\end{array} \right. 
+$$
+
+\textbf{第四步，更新后验状态估计：}
+
+将$\boldsymbol{x}_{k}^{-}$、$\boldsymbol{H}_m$、$\boldsymbol{K}_k$和$\boldsymbol{z}_k = \theta _{new}$代入式中，有
+$$
+\boldsymbol{\hat{x}}_k=\left[ \begin{array}{c}
+	\theta\\
+	\omega _b\\
+\end{array} \right] =\left[ \begin{array}{c}
+	\theta ^-\\
+	\omega _{b}^{-}\\
+\end{array} \right] +\left[ \begin{array}{c}
+	K_0\\
+	K_1\\
+\end{array} \right] \left( \theta _{new}-\left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \left[ \begin{array}{c}
+	\theta ^-\\
+	\omega _{b}^{-}\\
+\end{array} \right] \right) 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	\theta =\theta ^-+K_0\left( \theta _{new}-\theta ^- \right)\\
+	\omega _b=\omega _{b}^{-}+K_1\left( \theta _{new}-\theta ^- \right)\\
+\end{array} \right. 
+$$
+
+\textbf{第五步，更新后验状态估计误差协方差矩阵：}
+
+将$\boldsymbol{P}_{k}^{-}$、$\boldsymbol{H}_m$和$\boldsymbol{K}_k$代入式中，有
+$$
+\boldsymbol{P}_k=\left[ \begin{matrix}
+	P_{00}&		P_{01}\\
+	P_{10}&		P_{11}\\
+\end{matrix} \right] =\left( \left[ \begin{matrix}
+	1&		0\\
+	0&		1\\
+\end{matrix} \right] -\left[ \begin{array}{c}
+	K_{0}\\
+	K_{1}\\
+\end{array} \right] \left[ \begin{matrix}
+	1&		0\\
+\end{matrix} \right] \right) \left[ \begin{matrix}
+	P_{00}^{-}&		P_{01}^{-}\\
+	P_{10}^{-}&		P_{11}^{-}\\
+\end{matrix} \right] 
+$$
+展开上式，有
+$$
+\left\{ \begin{array}{l}
+	P_{00}=P_{00}^{-}-K_0P_{00}^{-}\\
+	P_{01}=P_{01}^{-}-K_0P_{01}^{-}\\
+	P_{10}=P_{10}^{-}-K_1P_{10}^{-}\\
+	P_{11}=P_{11}^{-}-K_1P_{11}^{-}\\
+\end{array} \right. 
+$$
+
+到这里为止，最后计算得出的后验状态估计误差协方差矩阵$\boldsymbol{P}_k$为下一循环的卡尔曼滤波做准备。
+\section{电子调速器软件系统}
+\subsection{软件系统介绍}
+无感无刷电调软件系统的核心功能是通过预定的算法实现对电机转子位置和速度的实时估算，从而在没有物理传感器的情况下进行高精度的电机控制，能够在保持电机运行稳定性的同时，实现高效、低能耗的控制。该控制通常依赖于反电势过零检测技术。通过检测绕组上的反电势信号的零点位置来确定转子的位置，并生成相应的 PWM 信号来调节电机的转速、方向以及输出扭矩。
+
+为了实现无感无刷电机的平稳启动，尤其是在低速或静止状态下，软件系统也集成了启动算法。启动阶段结束后，系统会逐渐切换到基于反电势的控制模式，实现更高效的运行。此外，该系统也配备了通信接口模块，PPM、UART，用于接收外部控制命令。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/c1.png}
+    \caption{系统软件架构图}
+    \end{figure}
+
+\subsection{系统初始化}
+系统启动初期，主函数先对 STC32G 芯片的各个外设模块，如定时器、比较器、PWM、ADC 等进行初始化配置，以确保系统的正常运行。同时，对软件资源，如变量初始化、PWM 占空比默认值、电机死区设置等进行默认处理，确保系统运行时的数据一致性，以避免在 H 桥驱动电机时出现上下桥臂同时导通的情况，确保电机的安全运行。此外，其他如中断优先级的设置、串口通信的初始化等，都在系统启动的初期得到合理配置，为后续系统的稳定运行奠定基础。
+%在系统启动初期，主函数首先对 STC32G 芯片的各个外设模块进行全面的初始化配置，以确保系统的正常运行。具体来说，定时器的初始化配置用于精确控制任务的时间调度和系统事件的定时触发；比较器的设置确保信号的实时比较和电平检测；ADC的配置则用于采集电压模拟信号并转换为数字数据；PWM 的初始化则为电机控制和其他负载控制提供所需的信号输出。在这些外设初始化的同时，主函数还对系统中的软件资源进行配置。例如，对全局和局部变量进行初始化，确保系统运行时的数据一致性；对PWM的占空比进行默认值设置，保证启动时电机或其他控制设备处于合理的工作状态；同时，还根据电机特性对死区时间进行配置，以避免在H桥驱动电机时出现上下桥臂同时导通的情况，确保电机的安全运行。此外，其他如中断优先级的设置、串口通信的初始化等，都在系统启动的初期得到合理配置，为后续系统的稳定运行奠定基础。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.21]{./pic/init1.png}
+    \caption{电调初始化流程图}
+    \label{init1}
+    \end{figure}
+\subsection{状态控制与指示}
+周期中断以每 50us 的固定频率运行，主要负责电机的启动运行、停止、故障等信息，方便用户实时了解系统的运行情况；另一方面，周期中断承担着电机启动、停止以及堵转检测等关键任务。在电机启动过程中，它按照预定的启动流程和时序，协调各个模块之间的工作，确保电机能够平稳、顺利地启动。同时，通过对电机运行状态的实时监测，一旦检测到电机出现堵转情况，能够迅速停止电机运转，并发出故障报警信号。此外，周期中断还肩负着电池低电压保护的重要职责。通过对电池电压的实时监测和分析，当检测到电池电压低于设定的安全阈值时，立即停止电机运行，以保护电池免受过度放电的损害。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.19]{./pic/state1.png}
+    \caption{电调状态控制流程图}
+    \label{state1}
+    \end{figure}
+\subsection{PPM 编解码}
+脉冲位置调制（Pulse Position Modulation，PPM）的原理是通过编码产生脉 冲信号，然后对基带信号进行调制，也就是将信号信息附加到 PPM 脉冲信号上， 调制信号决定载波脉冲的时间。这是遥控模型中比较通用的一种信号格式，PPM 解码原理是通过检测给定频率的 PWM 信号的占空比来获取指令信号。其原理见图\ref{ppm1}，信号频率为50Hz，一个周期为20ms。对于电调来讲，脉宽为1ms表示停转，脉宽为2ms表示满油门运转，其间的各点按比例换算：比如脉宽为1.5ms就表示50\%油门等等。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/ppm1.png}
+    \caption{PPM信号图解}
+    \label{ppm1}
+    \end{figure}
+
+在如图\ref{ppm2}的 PWMB 中断服务程序中，系统专注于高效处理电调输入信号，确保对电机控制信号的实时响应。通过精确测量输入信号的高电平持续时间以及整个周期时间，能够准确地计算出油门信号的变化情况，进而获取油门大小信息。具体来说，当接收到PWM信号时，中断服务程序会首先记录信号的上升沿和下降沿，计算高电平时间和整个周期时间。根据这些数据，系统能够确定油门信号的占空比，从而准确反映电调输入的油门大小。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.45]{./pic/ppm2.png}
+    \caption{电调油门控制流程图}
+    \label{ppm2}
+    \end{figure}
+
+\subsection{六步换相法}
+六步换相法的基本思想是通过顺序地给电机的三相绕组施加电压，使得电流方向在电机的三个绕组中不断变化，从而产生旋转磁场，驱动电机转动。具体来说，电机的转动是通过控制绕组的电流变化来实现的。每当一个绕组的电流达到最大值后，电流方向被切换到下一个绕组，这样就能形成一个不断旋转的磁场，使得电机的转子随着外部的磁场变化而转动。
+
+其将每个电机周期分为六个步骤，如图\ref{liubu}。每个步骤通过激活两个绕组（一个绕组为高电平，另一个为低电平）并关闭第三个绕组来产生磁场。在这些步骤中，电流的变化顺序按照特定的逻辑进行，以确保电流在各个绕组之间的顺序变化，保持电机的平稳转动。通过这种方法，电机每转一圈，换相就会进行六次，从而实现无刷电机的平稳运行。
+\begin{figure}[h]
+     \centering
+    \subfigure[A、C相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu1.png} 
+    }
+    \quad
+    \subfigure[A、B相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu2.png}  
+    }
+    \subfigure[C、B相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu3.png} 
+    }
+    \quad
+    \subfigure[C、A相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu4.png}  
+    }
+    \subfigure[B、A相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu5.png} 
+    }
+    \quad
+    \subfigure[B、C相导通]{
+    \includegraphics[scale=0.2]{./pic/liubu6.png}  
+    }
+    \caption{六步换相法图解}
+    \label{liubu}
+    \end{figure}
+
+电机的换相过程是无刷直流电机驱动控制的核心，定时器 0 中断通过定时触发，按照电机运行的时序，根据=转子位置和预设的换相策略，按顺序切换定子的电流方向，精确控制每次换相的时机，从而驱动无刷电机旋转。
+
+此外，定时器 0 中断还负责电机的消磁处理，如图\ref{xxx}。消磁过程是为了防止电机在运行过程中出现过剩的磁场，减少电磁损耗和热量积累，保护电机的运行效率与寿命。通常，在每次换相完成后，为了消除定子绕组中的剩余磁场，需要进行一定的延时处理。
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[scale=0.15]{./pic/xxx.png}
+%     \caption{无刷电机消磁事件}
+%     \label{xxx}
+%     \end{figure}    
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.2]{./pic/timer0.png}
+    \caption{电调六步换相流程图}
+    \label{timer0}
+    \end{figure}
+
+\newpage

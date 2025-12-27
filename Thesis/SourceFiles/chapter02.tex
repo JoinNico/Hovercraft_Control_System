@@ -1,0 +1,194 @@
+\part{系统硬件选型及设计}
+\section{主控制器硬件设计}
+\subsection{主控制器硬件介绍}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.35]{./pic/mb.png}
+    \caption{主控制器硬件框图}
+    
+    \end{figure}
+\subsection{MCU 芯片选型}
+CH32V307 是一款基于32位 RISC-V 架构的高性能互联型微控制器，具备 144MHz 主频、硬件浮点运算和增强的中断响应能力。其特点包括64KB SRAM、256KB Flash、多种低功耗模式、丰富的外设接口（如8个串口、USB 2.0高速接口、千兆以太网）、高精度 ADC/DAC 转换以及支持 CAN、SDIO、IIC、SPI 等通信协议。该系列还内置了随机数发生器、安全调试接口，并提供LQFP64M、LQFP100等封装形式，适合物联网、工业控制等领域。
+\begin{figure}[h]
+    \centering
+    \subfigure[CH32V307 系统框图]{
+    \includegraphics[scale=0.24]{./pic/ch32v307.png} 
+    }
+    \quad
+    \subfigure[CH32V307 实物图]{
+    \includegraphics[scale=0.1]{./pic/ch32.jpg}  
+    }
+    \caption{CH32V307 微控制器}
+    \end{figure}
+
+\subsection{电源管理电路}
+电源管理电路是负责控制和调节电子设备中电源的分配与使用的关键部分，确保设备能够在各种工作环境下高效、稳定地运行。它通过精确调节电压、电流、功率等参数，不仅维持设备的正常工作状态，还能优化能耗、延长电池寿命，并保障系统在过压、过流或短路等极端情况下的安全。这种灵活而高效的电源管理在现代电子系统设计中不可或缺，是提升系统整体性能和用户体验的核心环节。为满足需要，本系统上存在3种供电电压：
+\begin{enumerate}[i)]
+    \item 电机供电使用航模锂电池，充满时电压在11.1V左右。
+    \item 部分数字器件使用直流5V，选用降压转换器 TPS5430。
+    \item 部分数字器件使用直流3.3V，选用线性稳压器 RT9013-33GB。
+    \end{enumerate} 
+
+\begin{figure}[h]
+    \centering
+    \subfigure[5v 供电电路]{
+    \includegraphics[scale=0.32]{./pic/5vpower.png} 
+    }
+    \quad
+    \subfigure[3.3v 供电电路]{
+    \includegraphics[scale=0.32]{./pic/3_3v.png} 
+    }
+    \caption{电源管理电路原理图}
+    \end{figure}
+其中，降压转换器 TPS5430 的输出电压$V_{\text{OUT}}$与反馈电阻满足如下关系式
+$$
+R_5=\frac{R_4\times 1.221}{V_{\text{OUT}}-1.221}
+$$
+
+\section{电子调速器硬件设计}
+\subsection{电子调速器硬件介绍}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/dt.png}
+    \caption{电子调速器硬件框图}
+    
+    \end{figure}
+\subsection{元器件选型}
+\subsubsection{MCU 芯片选型}
+主控选用 STC32G12K128-LQFP48 驱动无刷电机，这款单片机特点是主频最大可达 35MHz、两组8通道 PWM 通道、一个比较器，比较器输入端可以连接到ADC通道或者IO、宽范围工作电压 1.9 - 5.5v、UART 数量有4个。
+
+\begin{figure}[h]
+    \centering
+    \subfigure[STC32G12K128 系统框图]{
+    \includegraphics[scale=0.5]{./pic/stc32g.png} 
+    }
+    \quad
+    \subfigure[CH32V307 实物图]{
+    \includegraphics[scale=0.12]{./pic/stc32.jpg}  
+    }
+    \caption{STC32G12K128 微控制器}
+    \end{figure}
+\subsubsection{MOSFET 选型}
+由于单片机内部已经集成了比较器，因此外围器件选择主要就集中在了栅极驱动芯片、MOS管型号的选择上，MOS管我们选择的型号是 TPN2R703NL，这款 MOS 电流高达45A，10V的时候内阻低至2.2毫欧，开启电压低至2.3V左右，性价比较高。
+\subsubsection{栅极驱动芯片选型}
+栅极驱动芯片选用 FD6288Q，主要因为该芯片集成有三个独立半桥栅极驱动器，这样的高集成度减少了外部组件的数量，从而降低了故障风险。此外，FD6288Q支持高电压操作，具备高速开关特性，并且内置了过流保护、欠压锁定等保护机制，增强了系统的整体稳定性。
+
+\subsection{外围电路设计}
+\subsubsection{三相逆变电路}
+三相逆变器是一种将直流电转化为三相交流电的电力电子设备，广泛应用于电动机驱动、风力发电、光伏发电等场合。其核心工作原理是利用功率半导体器件（如IGBT、MOSFET等）的开关动作，通过脉宽调制（PWM）技术来控制输出电压和频率。三相逆变器输出的三相交流电具有相互错开120度的相位，能够为三相电动机或其他负载提供平稳的动力。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/tpn.png}
+    \caption{三相逆变电路原理图}
+    \end{figure}
+\subsubsection{栅极驱动电路}
+在无刷直流电机（BLDC）驱动器中，栅极驱动电路用于控制功率 MOSFET，驱动电机绕组电流。由于 MOSFET 栅极的电容较大，单靠 MCU 的输出驱动能力往往不足以在短时间内快速充电和放电。因此，栅极驱动电路能够提供足够的电流来快速切换功率器件，确保开关的快速导通和关断。另一方面，栅极驱动电路通常包括死区时间控制功能，在半桥或全桥电路中，确保了上下桥臂的开关不会同时导通，以避免直通现象导致的短路。
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/FD6288.png}
+    \caption{FD6288典型应用电路}
+    \end{figure}
+
+自举二极管$ D_{BS}$的作用是为自举电容提供充电路径，确保其在每个开关周期内都能够被有效充电，维持所需的电压水平。当低侧开关导通时，电流通过自举二极管流入电容，使其充电。选择自举二极管时，应考虑其反向击穿电压和反向恢复时间这两个关键参数。高反向击穿电压能够保证自举二极管在高侧开关导通时承受较高的电压应力，而短的反向恢复时间则能确保二极管在从正向导通到反向截止的过程中迅速切换。
+
+基于这些要求，设计中选择了B5819WS肖特基二极管，其40V的反向击穿电压和10ns的反向恢复时间能够在高频开关操作中提供良好的稳定性和可靠性。
+
+自举电容$ C_{BS}$则用于储存能量，并在高侧开关导通时为栅极驱动电路提供所需的电压。在半桥驱动电路中，自举电容通过自举二极管在低侧开关导通时充电，当高侧开关导通时，自举电容释放储存的电压，驱动高侧MOSFET的栅极。因此，自举电容的选择和设计对系统的正常运行也至关重要。
+
+依据FD6288Q数据手册，选择陶瓷电容并使用如下公式计算其容量。
+$$
+C_{BS}\ge 10\times \frac{Q_g}{Vcc-V_F}
+$$
+
+式中，$C_{BS}$为自举电容的容值，$Q_g$为 MOSFET 的栅极电荷，$Vcc$为 FD6288Q 的供电电压，$V_F$为自举二极管的正向压降值。
+
+根据计算的结果，考虑到自举电容如果选用的容值远大于计算结果，会增加电路的充放电时间，影响系统的响应速度和动态性能。如果选用的容值小于计算结果，则没有容量来存储足够的电荷，无法提供足够的瞬态响应，导致栅极驱动电压不足。最后选用了具有4.7$\mu F$容值、耐压50V的陶瓷电容，以确保在高频开关操作中的高可靠性和稳定性。
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.4]{./pic/fd6288q.png}
+    \caption{栅极驱动电路原理图}
+    \end{figure}
+
+\subsubsection{反电动势过零检测电路}
+无刷直流电机通过电子控制器对定子绕组进行顺序激励，生成旋转磁场。这个旋转磁场与转子上的永磁体相互作用，产生电磁转矩，从而驱动转子旋转。为了确保电机能够平稳运行，电子控制器需要精确掌握转子的实时位置。只有在确认转子到达指定位置后，才能执行换相操作，以保持电机的平滑运转。转子位置检测常用有三种方式，基于电压的过零比较、霍尔传感器、磁编码器。
+
+我们采用低成本的过零比较检测，如图\ref{vvv}所示，电路通常由分压电路和比较电路组成。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.5]{./pic/vvv.png}
+    \caption{反电动势过零检测电路原理图}
+    \label{vvv}
+    \end{figure}
+
+如图\ref{t1}所示, 是 BLDC 的定子三相绕组星形连接的等效电路图。因为BLDC三相线圈的公共点 ，即中性点 N 在电机内部没有引出, 不能直接测量得到中性点的电势 $ U_{N}$, 但是也可以构造虚拟中性点$ N'$来模拟真实中性点的电势.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.3]{./pic/t1.png}
+    \caption{虚拟中性点示意图}
+    \label{t1}
+    \end{figure}
+
+根据KVL、KCL对 BLDC 三相绕组建立数学模型
+\begin{equation}
+    \left\{ \begin{array}{l}
+        U_A=I_AR+L\frac{\text{d}I_A}{\text{d}t}+E_A+U_N\\
+        U_B=I_BR+L\frac{\text{d}I_B}{\text{d}t}+E_B+U_N\\
+        U_C=I_CR+L\frac{\text{d}I_C}{\text{d}t}+E_C+U_N\\
+        I_A+I_B+I_C=0\\
+        E_A+E_B+E_C=0\\
+    \end{array} \right. \label{}
+    \end{equation}
+
+式中，$U_A$、$U_B$、$U_C$为三相绕组A、B、C三个极上的电势；$I_A$、$I_B$、$I_C$为三相绕组内的电流；$E_A$、$E_B$、$E_C$为三相绕组上的反电动势；$U_N$为三相绕组的公共点N的电动势。
+
+因为B相悬空的缘故有$I_B=0$，易知
+\begin{equation}
+    E_B=U_B-U_N \label{}
+    \end{equation}
+
+也就是说, 悬空相上的反电动势就是悬空相对应极 (端) 的电势减去中性点的电势。
+
+式(1)中第 5 个式子, 在悬空相反电动势过零时刻成立, 即此时反电动势之和为零。将式(1)中前三行式子两侧各自相加, 并考虑后两个式子, 得到悬空相反电动势过零时刻实际三相绕组中性点 N 的电势为
+\begin{equation}
+    U_A+U_B+U_C=3U_N \label{}
+    \end{equation}
+
+再对虚拟中性点用KCL、KVL列得
+\begin{equation}
+    \left\{ \begin{array}{l}
+        U_A=I'_AR+U_N'\\
+        U_B=I'_BR+U_N'\\
+        U_C=I'_CR+U_N'\\
+        I'_A+I'_B+I'_C=0\\
+    \end{array} \right. \label{}
+    \end{equation}
+
+对式(4)中前三式两侧相加, 得到虚拟中性点$ N'$的电势
+\begin{equation}
+    U_A+U_B+U_C=3U_N' \label{}
+    \end{equation}
+
+结合式(3)和式(5)得到
+\begin{equation}
+    U_N=U_N' \label{}
+    \end{equation}
+
+即\textbf{反电动势过零点时, 虚拟中性点与三相绕组中性点电压一致}。
+
+结合式(2)和式(6)，有$E_B = U_B-U_N'$。反电动势过零点时刻$ E_B=0$, 则只需要检测并验证下式是否成立即可。
+$$
+U_B\overset{\text{?}}{=}U_{N'}
+$$
+
+实际应用中，虚拟中性点的检测电路如图\ref{t2}所示。电路中, 分压以获得合适检测范围；滤波滤除尖峰、高次谐波。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[scale=0.25]{./pic/t2.png}
+    \caption{过零检测电路示意图}
+    \label{t2}
+    \end{figure}
+
+\newpage
