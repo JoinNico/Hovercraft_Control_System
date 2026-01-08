@@ -2,35 +2,67 @@
 \usepackage{amsmath, amsthm, amssymb, graphicx, booktabs, multirow, geometry, float}
 \usepackage{enumerate}
 \usepackage{listings}
-% \usepackage{xcolor}
 \usepackage{txfonts, subfigure, xpatch}
 \usepackage[thicklines]{cancel}
 \usepackage[utf8]{inputenc}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage{colortbl}
+\usepackage{caption}  % 提供更好的标题控制
+\usepackage{fancyhdr} % 控制页眉页脚
+
+% 设置图表编号格式：章节.序号，不带冒号
+\renewcommand{\thefigure}{\arabic{section}.\arabic{figure}}
+\renewcommand{\thetable}{\arabic{section}.\arabic{table}}
+\captionsetup[figure]{labelsep=space}  % 编号和标题之间用空格
+\captionsetup[table]{labelsep=space}   % 编号和标题之间用空格
+
+% 清除所有页眉页脚设置
+\pagestyle{fancy}
+\fancyhf{} % 清除所有页眉页脚
+\renewcommand{\headrulewidth}{0pt} % 去掉页眉横线
+\cfoot{\thepage} % 页码居中显示在页脚
+
+% 让图片和表格按section编号
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+\ctexset{
+    section = {
+        name = {第\,,\,章},  % \, 小空格，\; 中等空格
+        number = \arabic{section},
+        format = \Large\bfseries\centering,
+    }
+}
 
 \geometry{a4paper,scale=0.8}
 \title{基于 RISC-V 微控制器的气垫船控制系统设计与实现}
 \author{顾云豪}
 \begin{document}
 
+
 % 生成标题
 \maketitle
 \newpage
-
+\pagenumbering{roman} % 摘要、目录等前置部分使用罗马数字页码（i, ii, iii...）
 \tableofcontents
 \newpage
+\pagenumbering{arabic} % 正文开始，切换为阿拉伯数字并从1开始
 
 \input{chapter01.tex}
 \newpage
-\input{chapter02.tex}
-\newpage
+% \input{chapter02.tex}
+% \newpage
 \input{chapter03.tex}
 \newpage
 \input{chapter04.tex}
 \newpage
-
+\input{chapter05.tex}
+\newpage
+% \input{chapter06.tex}
+% \newpage
 
 \input{reference.tex}
-%\input{appendix.tex}
+\newpage
+
+\input{appendix.tex}
 \end{document}

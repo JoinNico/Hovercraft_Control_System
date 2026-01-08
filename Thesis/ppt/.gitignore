@@ -1,0 +1,71 @@
+# LaTeX 编译生成的临时文件
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.synctex.gz
+*.synctex(busy)
+*.xdv
+
+# 中间文件
+*.dvi
+*.ps
+*.lof
+*.lot
+
+# # 最终输出文件（如果不需要在仓库中保存 PDF）
+# *.pdf
+
+# 特定于 Beamer 的文件
+*.vrb  # 某些 Beamer 主题生成的文件
+
+# 特定于编辑器的临时文件
+*~
+*.bak
+*.swp
+
+# BibTeX 相关文件
+*.bcf
+*.run.xml
+
+# 图片生成的中间文件（如使用 TikZ 等）
+*.dpth
+*.md5
+
+# glossaries 包生成的文件
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# listings 包生成的文件
+*.lol
+
+# 某些包生成的额外文件
+*.ent
+
+# TeXnicCenter 项目文件
+*.tps
+
+# 自定义宏包/文档类文件（如果需要可以取消注释）
+*.sty
+*.cls
+
+# 特定于操作系统的文件
+.DS_Store
+Thumbs.db
+*.desktop
+
+# # 构建目录（如果使用单独的 build 目录）
+# build/
+# _output/
