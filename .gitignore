@@ -1,9 +1,69 @@
-Thesis/SourceFiles/texput.fls
-Thesis/SourceFiles/paper.fls
-Thesis/SourceFiles/paper.fdb_latexmk
-Thesis/SourceFiles/paper.synctex.gz
-Thesis/000-02-mao-202511-信息技术综合实践-报告模版及说明.docx
-Thesis/000-03-mao-202511-信息技术综合实践-内部内容样例.docx
-Thesis/毕业设计任务书.docx
-Thesis/thesis.pdf
-Thesis/000-01-mao-课题选题及功能设计(撰写参考样例).pdf
+# 编译输出文件和中间文件
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.d
+*.su
+
+# 编译生成目录
+build/
+Debug/
+Release/
+obj/
+out/
+bin/
+lib/
+
+# IDE 相关文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Keil MDK
+*.uvguix.*
+*.uvoptx
+*.uvprojx
+*.dep
+
+# Eclipse/ARM GCC
+.project
+.cproject
+.settings/
+
+# 依赖库/下载的SDK
+**/ThirdParty/
+**/lib/
+**/deps/
+
+# 用户配置文件（通常包含敏感信息或本地设置）
+*.local
+*.user
+*.config
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 文档生成
+docs/_build/
+docs/_out/
+
+# 特定于 FreeRTOS 的生成文件（如果有）
+portmacro.h
+
+# 版本控制系统
+.git/
+.svn/
+
+# 操作系统生成文件
+.DS_Store
+Thumbs.db
