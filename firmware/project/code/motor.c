@@ -155,6 +155,7 @@ void Brushless_Motor_SetPwmValue(int duty)
 void MOTOR_SetPwmValue(int pwm_l, int pwm_r)
 {
     left_motor_duty(pwm_l);
+//    leftside_motor_duty(pwm_l);
     right_motor_duty(pwm_r);
 }
 
@@ -218,10 +219,14 @@ void MOTOR_ControlLoop(PIDStruct pidStr, float speed, int changepwm)
 
     pidStr.vi_Ref = (float)(speed * ENCODER_CONTROL_CYCLE / WheelStr.DiameterWheel / PI * WheelStr.EncoderLine );
 
-    motor_pwm = PID_MoveCalculate(&pidStr);
+//    dat[0] = (float)(speed * ENCODER_CONTROL_CYCLE / WheelStr.DiameterWheel / PI * WheelStr.EncoderLine );
+    motor_pwm =PID_MoveCalculate(&pidStr);
+//    dat[1] = motor_pwm;
+    //printf("base_pwm=%d\r\n",20*motor_pwm);
+//    MOTOR_SetPwmValue(2400+4*motor_pwm,2400+4*motor_pwm);
 
-    leftpwm = 2400 + 4 * motor_pwm + changepwm;
-    rightpwm = 2400 + 4 * motor_pwm - changepwm;
+    leftpwm = 2400+4*motor_pwm + changepwm;
+    rightpwm = 2400+4*motor_pwm - changepwm;
 
     if((changepwm > 0) && (leftpwm > 6000))
     {
@@ -241,8 +246,33 @@ void MOTOR_ControlLoop(PIDStruct pidStr, float speed, int changepwm)
 #endif
 }
 
+//void MOTOR_VelocityControlLoop(PIDStruct pidStr, float speed)
+//{
+//    pid_param_init();
+//
+//    pidStr.vi_Ref = (float)(speed * ENCODER_CONTROL_CYCLE / WheelStr.DiameterWheel / PI * WheelStr.EncoderLine );
+//
+//    MOTOR_SetPwmValue(-PID_MoveCalculate(&pidStr),PID_MoveCalculate(&pidStr));
+//}
+
 void motor_control(void)
 {
+//    static int motor_delay_start = 0;
+//    if(motor_start_flag == 0)
+//    {
+//      motor_delay_start = 200;
+//      left_motor_duty(0);
+//      right_motor_duty(0);
+//      return;
+//    }
+//    if(motor_start_flag == 1)
+//    {
+//      motor_delay_start--;
+//      if(motor_delay_start > 0)
+//        return;
+//    }
+
+
     if(1 == smartcar_status.motor_close_circle)
     {
         if(smartcar_status.motor_on)
@@ -282,6 +312,8 @@ void Side_Motor_ControlLoop(Pid image_pid, int changepwm)
     else {
         MOTOR_Side_SetPwmValue(0,0);
     }
+
+//    printf("%d\r\n",(int)smartcar_param.K_changepwm * changepwm);
 }
 
 void side_motor_control(void)
@@ -291,5 +323,6 @@ void side_motor_control(void)
         Side_Motor_ControlLoop(image_pid, smartcar_status.goal_side_PWM);
     }else{
         Side_Motor_ControlLoop(image_pid, 0);
+
     }
 }

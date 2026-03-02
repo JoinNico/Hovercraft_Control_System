@@ -1,9 +1,13 @@
 # 基于 RISC-V 气垫船控制系统：嵌入式系统实践
 
+<div align="center">
+  
 [![GitHub Stars](https://img.shields.io/github/stars/JoinNico/Hovercraft_Control_System?style=flat&logo=github)](https://github.com/JoinNico/Hovercraft_Control_System/stargazers)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![MCU: CH32V307](https://img.shields.io/badge/Arch-RISC--V-red)](https://www.wch.cn/products/CH32V307.html)
 [![RTOS: FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-green)](https://www.freertos.org/)
+
+</div>
 
 
 **第十九届全国大学生智能汽车竞赛参赛作品** | **一个完整的高性能实时控制系统实现**
@@ -14,7 +18,7 @@
 ### **技术栈的完整实践**
 - **前沿架构**：基于**RISC-V**生态的CH32V307，探索国产芯片+开源指令集的可能性
 - **实时系统**：**FreeRTOS**多任务调度，可以实时性地完成任务控制
-- **算法深度**：从电机**无感驱动**到运动**串级PID控制**的全链路实现（感谢逐飞科技的大力开源）
+- **算法深度**：从电机**无感驱动**到运动**串级PID控制**的全链路实现（这里要感谢逐飞科技的大力开源）
 - **工程完备**：硬件设计→固件开发→算法调试→系统集成的完整闭环
 
 ### **从理论到实战的跨越**
@@ -43,15 +47,18 @@ Hovercraft_Control_System/
 传感器层(IMU/编码器) → 数据处理层(滤波/融合) → 控制算法层(串级PID) → 执行层(电机驱动) → 人机交互层
 
 ### **关键技术实现**
-1. **无刷电机无感驱动**
+1. **无刷电机无感驱动**（由逐飞科技提供）
    - 基于反电动势过零检测的方波驱动算法
    - 启动策略优化：三段式启动（预定位→加速→闭环）
 
 2. **串级PID运动控制**
 ```c
-   // 简化的控制逻辑
-   outer_loop = pid_calc(&speed_pid, target_speed, actual_speed);
+   // 简化的控制逻辑 - 伪代码
+   outer_loop = pid_calc(&image_pid, target_image, actual_image);
    inner_loop = pid_calc(&angle_pid, outer_loop, actual_angle);
+
+   speed_loop = pid_calc(&speed_pid, target_speed, actual_speed);
+
    motor_output = constrain(inner_loop, -MAX_PWM, MAX_PWM);
 ```
 3. **FreeRTOS任务设计**
