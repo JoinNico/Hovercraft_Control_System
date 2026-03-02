@@ -7,15 +7,12 @@
 [![MCU: CH32V307](https://img.shields.io/badge/Arch-RISC--V-red)](https://www.wch.cn/products/CH32V307.html)
 [![RTOS: FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-green)](https://www.freertos.org/)
 
-</div>
-
-
 **第十九届全国大学生智能汽车竞赛参赛作品** | **一个完整的高性能实时控制系统实现**
 
-<div align="center">
-  <img src="fig/DEMO.gif" alt="DEMO" width="80%">
+<img src="fig/DEMO.gif" alt="DEMO" width="60%">
 
-  **气垫船运行效果演示**
+**气垫船运行效果演示**
+
 </div>
 
 > **✨亮点速览**：这是**我和我的团队**构建的气垫船控制系统，采用沁恒微电子公司的 CH32V307 + FreeRTOS，实现了气垫船的**全向精准控制**。不仅“能动”，还有不错的 **速度、角度控制精度**。下面，我将带你深入这个硬核而优雅的嵌入式系统世界。
@@ -51,7 +48,12 @@ Hovercraft_Control_System/
 ### **智能控制核心**
 
 #### 系统架构概览
-![](fig/system.png "")
+<div align="center">
+  <img src="fig/system.png" alt="" width="60%">
+
+  **系统软件架构图**
+</div>
+
 本系统采用一套分层化、模块化的软件架构，自顶向下划分为业务逻辑层、功能中间件层、硬件驱动层以及片上外设驱动层，层间通过标准化 API 接口实现解耦，确保系统的高内聚低耦合特性。
 
 在**业务逻辑层**，我们构建了基于视觉的图像识别模块与实时元素决策模块，前者通过摄像头采集环境信息并识别关键航路点与障碍物，后者则依据识别结果、IMU姿态数据以及预设航迹规划，通过串并级 PID 算法生成精确的电机控制指令。同时，该层集成了用户交互（UI菜单）与数据传输（蓝牙）功能，实现了控制指令下发与船体状态信息的双向通信。
@@ -68,8 +70,13 @@ Hovercraft_Control_System/
    - 基于反电动势过零检测的方波驱动算法
    - 启动策略优化：三段式启动（预定位→加速→闭环）
 
-2. **串级PID运动控制**
-![](fig/motor_control_pid.png "")
+2. **串并级PID运动控制**
+<div align="center">
+  <img src="fig/motor_control_pid.png" alt="" width="100%">
+
+  **串并级 PID 框图**
+</div>
+
 ```c
    // 简化的控制逻辑 - 伪代码
 
