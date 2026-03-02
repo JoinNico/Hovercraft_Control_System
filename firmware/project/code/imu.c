@@ -354,7 +354,7 @@ void IMUupdate(IMU_TYPE *IMU_Data)
     //Safety_Check();
 }
 
-void imu_updata(void)
+void imu_update(void)
 {
 //    icm20602_get_acc();
     icm20602_get_gyro();

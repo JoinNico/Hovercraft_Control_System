@@ -10,52 +10,27 @@
 
 #include "zf_common_headfile.h"
 
-void FreeRTOS_Start(void);
+/* ─────────────────────────── 任务优先级 ─────────────────────────── */
+#define PRIORITY_CONTROL        12
+#define PRIORITY_PERCEPTION     10
+#define PRIORITY_SYSTEM          3
+#define PRIORITY_UI              2
 
-/*
- *  Sensor_Task 任务 配置
- */
-#define Sensor_PRIO            5
-#define Sensor_STACK_SIZE      512
-//extern TaskHandle_t     key_handler;
+/* ─────────────────────────── 任务栈深度 ─────────────────────────── */
+#define STACK_CONTROL           256
+#define STACK_PERCEPTION        2048
+#define STACK_SYSTEM            128
+#define STACK_UI                512
 
-void Sensor_Task( void * pvParameters );
+/* ─────────────────────────── 任务通知位掩码 ─────────────────────── */
+// Control_Task 通知位
+#define NOTIFY_CONTROL_TICK     (1UL << 0)
 
-/*
- *  Key_Task 任务 配置
- */
-#define KEY_PRIO            4
-#define KEY_STACK_SIZE      2000
-//extern TaskHandle_t     key_handler;
-
-void Key_Task( void * pvParameters );
-
-/*
- *  GUI_RENDER 任务 配置
- */
-#define GUI_RENDER_PRIO             1
-#define GUI_RENDER_STACK_SIZE       512
-//extern TaskHandle_t     gui_render_task_handler;
-
-void Gui_Render_Task( void * pvParameters );
-
-/*
- *  LED_FLICKER 任务 配置
- */
-#define LED_FLICKER_PRIO         6
-#define LED_FLICKER_STACK_SIZE   2048
-//extern TaskHandle_t     led_flicker_handler;
-
-void Led_Flicker_Task( void * pvParameters );
-
-/*
- *  START_TASK 任务 配置
- */
-#define START_TASK_PRIO         0
-#define START_TASK_STACK_SIZE   128
+// Perception_Task 通知位
+#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
 
 extern float dat[4];
-void start_task( void * pvParameters );
 
+void FreeRTOS_Start(void);
 
 #endif /* FREERTOS_TASK_H_ */

@@ -23,7 +23,7 @@ SMARTCAR_PARAM param_zero = {
 
     .K_changepwm = 10.0,
 
-    .circle_dir  = {1,1},//0-×ó£¬1-ÓÒ
+    .circle_dir  = {0,1},//0-×ó£¬1-ÓÒ
     .circle_exit_angle = {38,-38},
     .circle_num = 1,
 

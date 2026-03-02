@@ -44,5 +44,5 @@ typedef struct
 extern uint8_t SENSER_OFFSET_FLAG;
 extern IMU_TYPE imu;
 
-void imu_updata(void);
+void imu_update(void);
 #endif

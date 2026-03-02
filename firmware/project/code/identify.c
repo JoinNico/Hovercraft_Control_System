@@ -283,74 +283,35 @@ int detect_stop(void)
 }
 
 /* ----------------------------------------检测路障---------------------------------------------- */
-//#define IN_BLOCK_DISTANCE       0.7
-//#define BLOCK_DIS_CTRL          1.5
-//int detect_block(void)
-//{
-//    static int block_flag = 0;
-//    static int block_num = 1;
-//    static int block_pre_flag = 0;
-//    static float block_pre_flag_point = 0;
-////    static float block_dis = 0;
-////    static int block_number = 0;
-//
-//    //如果等于任何其它非bend  则返回
-//    if((get_lock() != _BEND && get_lock() != _BLOCK ) || get_distance() < BLOCK_DIS_CTRL/*||  motor_start_flag == 0 || block_number>=smartcar_param.road_block_number*/ )
-//        return 0;
-//    if(block_num != 0)
-//    {
-//        block_pre_flag = search_block();
-//    }
-//    if(block_pre_flag)
-//    {
-//        block_pre_flag = 0;
-//        block_flag = BLOCK_IN;
-//        block_num--;
-//        block_pre_flag_point = get_distance();
-//        set_lock(_BLOCK);
-//    }
-//    if(BLOCK_IN == block_flag )
-//    {
-////        printf("%.2f,%.2f,%.2f\r\n",get_distance(),block_pre_flag_point,get_distance() - block_pre_flag_point);
-//        if(get_distance() - block_pre_flag_point > IN_BLOCK_DISTANCE )
-//        {
-//            block_flag = 0;
-//            clear_process_block_flag();
-//            clear_lock();
-//        }
-//    }
-//
-//    return block_flag;
-//}
-
-#define IN_BLOCK_DISTANCE       1.5
-#define BLOCK_DIS_CTRL          0.5
-
+#define IN_BLOCK_DISTANCE       0.7
+#define BLOCK_DIS_CTRL          1.0
 int detect_block(void)
 {
     static int block_flag = 0;
+    static int block_num = 1;
     static int block_pre_flag = 0;
     static float block_pre_flag_point = 0;
-    static int block_number = 1;
+//    static float block_dis = 0;
+//    static int block_number = 0;
 
-    if(get_lock() != _BEND && get_lock() != _BLOCK )
+    //如果等于任何其它非bend  则返回
+    if((get_lock() != _BEND && get_lock() != _BLOCK ) || get_distance() < BLOCK_DIS_CTRL/*||  motor_start_flag == 0 || block_number>=smartcar_param.road_block_number*/ )
         return 0;
-    if(get_distance() > BLOCK_DIS_CTRL && block_number != 0)
+    if(block_num != 0)
     {
-        block_pre_flag = 1;
-        block_in_process = 1;
+        block_pre_flag = search_block();
     }
-
     if(block_pre_flag)
     {
         block_pre_flag = 0;
         block_flag = BLOCK_IN;
-        block_number = 0;
+        block_num--;
         block_pre_flag_point = get_distance();
         set_lock(_BLOCK);
     }
     if(BLOCK_IN == block_flag )
     {
+//        printf("%.2f,%.2f,%.2f\r\n",get_distance(),block_pre_flag_point,get_distance() - block_pre_flag_point);
         if(get_distance() - block_pre_flag_point > IN_BLOCK_DISTANCE )
         {
             block_flag = 0;
@@ -361,6 +322,8 @@ int detect_block(void)
 
     return block_flag;
 }
+
+
 /* ----------------------------------------检测长直道--------------------------------------------- */
 int detect_long_straight_road(void)
 {

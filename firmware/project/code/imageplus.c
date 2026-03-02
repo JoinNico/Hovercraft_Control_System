@@ -2199,8 +2199,7 @@ void process_block_in_image(int dir)
     {
         for (int row = IMAGE_HEIGHT - 1; row > 0; row--)
         {
-            middle_line[row] = right_edge[row] + 10;
-//            middle_line[row] = middle_line[row] + 30;
+            middle_line[row] = middle_line[row] + 30;
 //            left_edge[row] = left_edge[row] + 20;
         }
     }

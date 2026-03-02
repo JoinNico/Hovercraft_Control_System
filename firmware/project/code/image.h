@@ -1,4 +1,3 @@
-// å·²åºŸå¼ƒ - è¯·ä½¿ç”¨ imageplus.h æ›¿ä»£
 #ifndef _IMAGE_H_
 #define _IMAGE_H_
 
@@ -7,17 +6,17 @@
 #include "zf_common_font.h"
 #include "zf_common_headfile.h"
 
-#define IMAGEH  MT9V03X_W//#define IMAGEH  MT9V034_IMAGEH   /* æ‘„åƒå¤´é‡‡é›†é«˜åº¦ */
-#define IMAGEW  MT9V03X_H//#define IMAGEW  MT9V034_IMAGEW   /* æ‘„åƒå¤´é‡‡é›†å®½åº¦ */
+#define IMAGEH  MT9V03X_W//#define IMAGEH  MT9V034_IMAGEH   /* ÉãÏñÍ·²É¼¯¸ß¶È */
+#define IMAGEW  MT9V03X_H//#define IMAGEW  MT9V034_IMAGEW   /* ÉãÏñÍ·²É¼¯¿í¶È */
 
-#define LCDH    120  /* TFTæ˜¾ç¤ºé«˜åº¦ï¼ˆç”¨æˆ·ä½¿ç”¨ï¼‰é«˜åº¦ */
-#define LCDW    160  /* TFTæ˜¾ç¤ºå®½åº¦ï¼ˆç”¨æˆ·ä½¿ç”¨ï¼‰å®½åº¦ */
-#define MID_LINE_VAL    (LCDW/2)                //å›ºå®šä¸­çº¿å€¼
-#define MAIN_RUN_LINE   (LCDH/2)                //ä¸»è·‘è¡Œ
+#define LCDH    120  /* TFTÏÔÊ¾¸ß¶È£¨ÓÃ»§Ê¹ÓÃ£©¸ß¶È */
+#define LCDW    160  /* TFTÏÔÊ¾¿í¶È£¨ÓÃ»§Ê¹ÓÃ£©¿í¶È */
+#define MID_LINE_VAL    (LCDW/2)                //¹Ì¶¨ÖĞÏßÖµ
+#define MAIN_RUN_LINE   (LCDH/2)                //Ö÷ÅÜĞĞ
 
-#define bin_jump_num    1//è·³è¿‡çš„ç‚¹æ•°
-#define BOEDER_MAX  LCDW-2 //è¾¹ç•Œæœ€å¤§å€¼
-#define BORDER_MIN  1   //è¾¹ç•Œæœ€å°å€¼
+#define bin_jump_num    1//Ìø¹ıµÄµãÊı
+#define BOEDER_MAX  LCDW-2 //±ß½ç×î´óÖµ
+#define BORDER_MIN  1   //±ß½ç×îĞ¡Öµ
 
 //typedef enum
 //{
@@ -27,12 +26,12 @@
 //    SobelAutoThreshold ,
 //}Bin_Image_Algorithm_Config;
 
-extern unsigned char Image_Use[LCDH][LCDW];/** å‹ç¼©åä¹‹åç”¨äºå­˜æ”¾å±å¹•æ˜¾ç¤ºæ•°æ®  */
-extern unsigned char Bin_Image[LCDH][LCDW];/** äºŒå€¼åŒ–åç”¨äºOLEDæ˜¾ç¤ºçš„æ•°æ® */
-extern uint8 l_border[LCDH];//å·¦çº¿æ•°ç»„
-extern uint8 r_border[LCDH];//å³çº¿æ•°ç»„
-extern uint8 center_line[LCDH];//ä¸­çº¿æ•°ç»„
-extern uint8 middle_line;//ä¸»è·‘è¡Œä¸­çº¿å€¼
+extern unsigned char Image_Use[LCDH][LCDW];/** Ñ¹ËõºóÖ®ºóÓÃÓÚ´æ·ÅÆÁÄ»ÏÔÊ¾Êı¾İ  */
+extern unsigned char Bin_Image[LCDH][LCDW];/** ¶şÖµ»¯ºóÓÃÓÚOLEDÏÔÊ¾µÄÊı¾İ */
+extern uint8 l_border[LCDH];//×óÏßÊı×é
+extern uint8 r_border[LCDH];//ÓÒÏßÊı×é
+extern uint8 center_line[LCDH];//ÖĞÏßÊı×é
+extern uint8 middle_line;//Ö÷ÅÜĞĞÖĞÏßÖµ
 
 void analyze_image(void);
 void image_show(void);

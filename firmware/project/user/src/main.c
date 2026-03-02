@@ -87,8 +87,8 @@ int main (void)
     adc_init(ADC1_IN9_B1,ADC_8BIT);
     //gpio_init(B0, GPO, 0, GPO_PUSH_PULL);
     buzzer_init();
-    gpio_init(C4, GPO, 0, GPO_PUSH_PULL);
 
+    gpio_init(C4, GPO, 0, GPO_PUSH_PULL);
 
     ips200_init(IPS200_TYPE_PARALLEL8);
 
@@ -98,7 +98,7 @@ int main (void)
             ips200_show_string(0, 16, "mt9v03x reinit.");
         else
             break;
-        system_delay_ms(500);                                                   // 短延时快速闪灯表示异常
+        system_delay_ms(500); // 短延时快速闪灯表示异常
     }
 
     ips200_clear();
