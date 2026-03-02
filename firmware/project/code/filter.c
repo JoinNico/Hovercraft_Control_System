@@ -9,7 +9,7 @@
 
 const float filter_weight[WIN_SIZE] = { 10, 15, 20, 25, 30, 40, 50, 60, 70, 80};
 
-float SlidingFilter(float array[WIN_SIZE], float value)
+float SlidingFilter(float array[WIN_SIZE], float value)//滑动滤波
 {
     //窗口滑动
     for(int i = 0; i < WIN_SIZE - 1; i++)
@@ -18,11 +18,32 @@ float SlidingFilter(float array[WIN_SIZE], float value)
     }
     array[WIN_SIZE - 1] = value;
 
+    //去最大最小
+//    float max = - 50000.0f;
+//    float argmax = 0;
+//    float min = 50000.0f;
+//    float argmin = 0;
+//    for(int i = 0; i < WIN_SIZE; i++)
+//    {
+//        if(array[i] > max)
+//        {
+//            max = array[i];
+//            argmax = (float)i;
+//        }
+//        if(array[i] < min)
+//        {
+//            min = array[i];
+//            argmin = (float)i;
+//        }
+//    }
+
     //加权
     float result = 0.0f;
     float weight_sum = 0.0f;
     for(uint8 i = 0; i < WIN_SIZE; i++)
     {
+//        if(i == argmin || i == argmax)
+//            continue;
         result += filter_weight[i] * array[i];
         weight_sum += filter_weight[i];
     }
@@ -129,68 +150,4 @@ void Yijielvbo(float angle_m, float gyro_m)
    angle = K1 * angle_m+ (1-K1) * (angle + gyro_m * 0.005);
 }
 
-// 初始化滤波器
-void kalman_init(KalmanFilter *kf, float Q_angle, float Q_bias,
-                 float R_measure, float dt) {
-    kf->state.angle = 0.0;
-    kf->state.bias = 0.0;
-    kf->P[0][0] = 0.0;
-    kf->P[0][1] = 0.0;
-    kf->P[1][0] = 0.0;
-    kf->P[1][1] = 0.0;
-    kf->Q_angle = Q_angle;
-    kf->Q_bias = Q_bias;
-    kf->R_measure = R_measure;
-    kf->dt = dt;
-}
 
-// 卡尔曼滤波算法
-float kalman_filter(KalmanFilter *kf, float new_angle, float new_Gyro) {
-    // 预测
-    //先验估计
-    kf->state.angle += kf->dt * (new_Gyro - kf->state.bias);
-    //协方差估计
-    kf->P[0][0] += kf->dt * ( kf->P[0][1]+ kf->P[1][0] )+ kf->Q_angle;
-    kf->P[0][1] -= kf->dt * kf->P[1][1];
-    kf->P[1][0] -= kf->dt * kf->P[1][1];
-    kf->P[1][1] += kf->Q_bias;
-
-    // 更新
-    //角度差
-    float y = new_angle - kf->state.angle;
-    //卡尔曼增益矩阵计算
-    float S = kf->P[0][0] + kf->R_measure;
-    float K[2];
-    K[0] = kf->P[0][0] / S;
-    K[1] = kf->P[1][0] / S;
-    //后验状态更新
-    kf->state.angle += K[0] * y;
-    kf->state.bias += K[1] * y;
-    //后验协方差误差更新
-    kf->P[0][0] -= K[0] * kf->P[0][0];
-    kf->P[0][1] -= K[0] * kf->P[0][1];
-    kf->P[1][0] -= K[1] * kf->P[0][0];
-    kf->P[1][1] -= K[1] * kf->P[0][1];
-
-    return kf->state.angle;
-}
-
-//int main() {
-//    // 设置卡尔曼滤波器参数
-//    float Q_angle = 0.00005;
-//    float Q_bias = 0.00015;
-//    float R_measure = 0.5;
-//    float dt = 0.005;//传感器实际采样频率
-//
-//    KalmanFilter kf;
-//    kalman_init(&kf, Q_angle, Q_bias, R_measure, dt);
-//
-//    // 陀螺仪和加速度计数据
-//    float gyro_data = 0.1;  // 陀螺仪数据，通过I2C读取
-//    float accel_data = 0.0; // 加速度计数据，通过I2C读取
-//
-//    float angle = kalman_filter(&kf, accel_data, gyro_data);
-//    printf("Filtered Angle: %.2f\n", angle);
-//
-//    return 0;
-//}

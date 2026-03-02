@@ -36,7 +36,7 @@ void range_protect(void * value,float upper_limit,float lower_limit,uint8 type)
 }
 
 //积分饱和，输出限幅
-float positional_pid(Pid *pid, float sensor_val)
+float positional_pid(Pid *pid, float sensor_val)//位置式pid
 {
     float output;
     float error = 0.0f;
@@ -186,10 +186,21 @@ signed int PID_MoveCalculate(PIDStruct *pp)
 
     if( ( error < VV_DEADLINE ) && ( error > -VV_DEADLINE ) )
     {
-        ;
+ //       printf("hello\r\n");
     }
     else
     {
+        //PID积分包和，必要时候启用，消抖
+//        I_error = pp -> v_Ki * error;
+//        if(I_error >= (VV_MAX/5))
+//        {
+//            I_error = VV_MAX/5;
+//        }
+//        else if(I_error <= (VV_MIN/5))
+//        {
+//            I_error = VV_MIN/5;
+//        }
+//        pp->vl_PreU += (pp -> v_Kp * d_error + I_error + pp->v_Kd*dd_error)/3;
         pp->vl_PreU += (pp -> v_Kp * d_error + pp -> v_Ki * error + pp->v_Kd*dd_error);
     }
 

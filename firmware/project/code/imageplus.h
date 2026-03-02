@@ -87,7 +87,6 @@ extern int finish_line_row;
 extern Inflexion left_inflexion;
 extern Inflexion right_inflexion;
 extern int is_cross;
-extern int block_in_process;
 
 static inline void set_last_line(int x)         {last_line = x;}
 static inline void set_available_line(int x)    {available_line = x;}

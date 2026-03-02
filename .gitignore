@@ -67,3 +67,7 @@ portmacro.h
 # 操作系统生成文件
 .DS_Store
 Thumbs.db
+
+# # 忽略特定的项目文件
+# hardware/
+# docs/

@@ -152,7 +152,9 @@ void DVP_IRQHandler(void)
 {
     if (DVP->IFR & RB_DVP_IF_FRM_DONE)
     {
-        camera_dvp_handler();
+//        camera_dvp_handler();
+        extern void dvp_handler (void);
+        dvp_handler();
         DVP->IFR &= ~RB_DVP_IF_FRM_DONE;
     }
 }
@@ -320,8 +322,9 @@ void TIM6_IRQHandler(void)
 {
     if(TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET)
     {
-       TIM_ClearITPendingBit(TIM6, TIM_IT_Update );
-
+//       TIM_ClearITPendingBit(TIM6, TIM_IT_Update );
+       extern void pit_handler (void);
+       pit_handler();
     }
 }
 
@@ -470,9 +473,9 @@ void NMI_Handler(void)
 *******************************************************************************/
 void HardFault_Handler(void)
 {
-    printf("mepc :%08x\r\n", __get_MEPC());
-    printf("mcause:%08x\r\n", __get_MCAUSE());
-    printf("mtval :%08x\r\n", __get_MTVAL());
+//    printf("mepc :%08x\r\n", __get_MEPC());
+//    printf("mcause:%08x\r\n", __get_MCAUSE());
+//    printf("mtval :%08x\r\n", __get_MTVAL());
     while (1)
     {
     }
