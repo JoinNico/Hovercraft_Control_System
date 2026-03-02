@@ -52,16 +52,28 @@ Hovercraft_Control_System/
    - 启动策略优化：三段式启动（预定位→加速→闭环）
 
 2. **串级PID运动控制**
+![气垫船硬件架构](fig/motor_control_pid.png "系统硬件框图")
 ```c
    // 简化的控制逻辑 - 伪代码
-   outer_loop = pid_calc(&image_pid, target_image, actual_image);
-   inner_loop = pid_calc(&angle_pid, outer_loop, actual_angle);
 
+   /* 外环输入：摄像头采集的图像 -> 进行图像分析 -> 得出的误差
+    * 外环输出：外环PID值
+    */
+   outer_loop = pid_calc(&image_pid, target_image, actual_image);
+   /* 内环输入：外环输出-PID值
+    * 内环输出：changePWM -> 控制电机转速
+    */
+   inner_loop = pid_calc(&angular_velocity_pid, outer_loop, actual_angular_velocity);
+
+   /* 速度环输入：编码器实际采集到的速度
+    * 速度环输出：basePWM -> 控制电机 基准 转速
+    */
    speed_loop = pid_calc(&speed_pid, target_speed, actual_speed);
 
-   motor_output = constrain(inner_loop, -MAX_PWM, MAX_PWM);
+   // 基准速度 + 内环输出 -> 控制电机 PWM 变化 -> 电机转速变化
+   motor_output = constrain(speed_loop + inner_loop, -MAX_PWM, MAX_PWM);
 ```
-3. **FreeRTOS任务设计**
+1. **FreeRTOS任务设计**
 <!-- /* 1. 避免优先级反转 */
 // 高优先级任务不应长时间阻塞
 // 使用信号量、互斥量时要小心
@@ -74,14 +86,16 @@ Hovercraft_Control_System/
 // 当前设计合理，但注意：
 // - 电机控制(1ms)是否真的需要这么高频率？
 // - 业务逻辑(20ms)是否可能阻塞其他任务？ -->
+我们采用硬实时中断触发 + 任务级软分频的混合架构。针对气垫船控制的特点，将系统划分为四个优先级分明的任务。
 
-| 任务 | 优先级 | 周期 | 功能 |
-|------|--------|------|------|
-| 电机控制 | 3 | 1ms | 实时PWM输出 |
-| 传感器采集 | 2 | 5ms | IMU/编码器读取 |
-| 人机交互 | 1 | 10ms | 显示更新/编码器处理 |
-| 业务逻辑 | 0 | 20ms | 高级控制逻辑 |
----
+| 任务名称 | 优先级 |  触发方式 | 功能描述 |
+|:--------:|:------:|:---------|:---------|
+| **Control_Task** | 最高 | TIM6 1ms 任务通知 | 硬实时控制环：IMU 姿态解算、利用 PID 对 PWM 计算、电机驱动 |
+| **Perception_Task** | 次高 | 摄像头场中断通知 | 图像处理：赛道识别、边线提取、路径决策 |
+| **System_Task** | 次低 | vTaskDelayUntil 100ms | 系统监控：电池电压采集、状态更新 |
+| **UI_Task** | 最低 | vTaskDelayUntil 40ms | 人机交互：LCD 刷新、编码器扫描、菜单响应 |
+
+既保证 1ms 控制环的严格实时性，又兼顾图像处理、UI 响应等复杂功能的执行效率。
 
 ## 快速开始
 
