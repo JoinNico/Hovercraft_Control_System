@@ -143,6 +143,7 @@
 //===================================================用户自定义文件===================================================
 #include "motor.h"
 #include "pid.h"
+#include "control.h"
 #include "buzzer.h"
 //#include "image.h"
 #include "imageplus.h"

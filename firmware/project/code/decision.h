@@ -24,5 +24,6 @@ extern Pid steer_pid;
 
 void decision(void);
 float angular_velocity_decision(float middle_line);
+int side_motor_decision(float middle_line);
 
 #endif

@@ -27,6 +27,9 @@ static void Control_Task(void *pvParameters)
     uint32_t ulNotifiedValue;
     uint32_t tick_count = 0;
 
+// Control_Task 通知位
+#define NOTIFY_CONTROL_TICK     (1UL << 0)
+
     for (;;)
     {
         /* 阻塞等待 TIM6 通知，无超时 */
@@ -42,6 +45,7 @@ static void Control_Task(void *pvParameters)
             /* ── 1ms 环 ── */
             imu_update();           /* 读取 ICM20602 原始数据并融合  */
             EC11_Scan();            /* 扫描旋转编码器，更新菜单状态  */
+
             smartcar_status.goal_PWM = PWM_decision(smartcar_status.goal_angular_velocity);         /* 根据姿态计算 PWM 输出量  */
             motor_control();        /* 主驱动电机 PWM 输出  */
 
@@ -49,7 +53,7 @@ static void Control_Task(void *pvParameters)
             /* ── 10ms 环 ── */
             if (tick_count % 10 == 0)
             {
-                       /* 图像分析，PID 角度闭环  */
+                /* 图像分析，PID 角度闭环  */
                 side_motor_control();   /* 横向辅助电机 PWM 输出 */
             }
 
@@ -60,7 +64,9 @@ static void Control_Task(void *pvParameters)
             }
 
             if (tick_count >= 1000)
-                tick_count = 0;
+            {
+                tick_count = 0; // 防止溢出
+            }
         }
     }
 }
@@ -73,6 +79,8 @@ static void Perception_Task(void *pvParameters)
 {
     uint32_t ulNotifiedValue;
 
+// Perception_Task 通知位
+#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
     for (;;)
     {
         /* 阻塞等待摄像头帧通知 */
@@ -83,9 +91,9 @@ static void Perception_Task(void *pvParameters)
 
         if (ulNotifiedValue & NOTIFY_PERCEPTION_FRAME)
         {
-            analyze_image();    /* 图像预处理（二值化、滤波等）         */
-            analyze_road();     /* 赛道识别（边线提取、中线计算等）     */
-            decision();         /* 路径决策，输出转向量                 */
+            analyze_image();    /* 图像预处理（二值化、滤波、中线计算等）   */
+            analyze_road();     /* 赛道元素识别   */
+            decision();         /* 路径决策，输出转向量  */
         }
     }
 }
@@ -109,7 +117,7 @@ static void System_Task(void *pvParameters)
 
 /*
  *  UI_Task — 人机界面 & 编码器扫描
- *  触发方式：vTaskDelayUntil 40ms 周期
+  *     触发方式：vTaskDelayUntil 40ms 周期
  */
 static void UI_Task(void *pvParameters)
 {
@@ -123,7 +131,7 @@ static void UI_Task(void *pvParameters)
         vTaskDelayUntil(&xLastWakeTime, xPeriod);
 
 
-//        GUI_Update();   /* 刷新 IPS200 显示内容                         */
+//        GUI_Update();   /* 刷新 IPS200 显示内容  */
         for (uint8_t i = 0 ; i < E_UI_MAX ; i++)
         {
             if (ui_index == ui_list[i].index)//如果当前索引等于UI表中的索引
@@ -190,6 +198,10 @@ void FreeRTOS_Start(void)
     vTaskStartScheduler();
 }
 
+/*
+ *  TIM6 1ms中断句柄
+ */
+
 void pit_handler (void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -207,6 +219,9 @@ void pit_handler (void)
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+/*
+ *  摄像头 DVP 场中断句柄
+ */
 void dvp_handler (void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;

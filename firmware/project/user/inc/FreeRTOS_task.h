@@ -22,13 +22,6 @@
 #define STACK_SYSTEM            128
 #define STACK_UI                512
 
-/* ─────────────────────────── 任务通知位掩码 ─────────────────────── */
-// Control_Task 通知位
-#define NOTIFY_CONTROL_TICK     (1UL << 0)
-
-// Perception_Task 通知位
-#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
-
 extern float dat[4];
 
 void FreeRTOS_Start(void);

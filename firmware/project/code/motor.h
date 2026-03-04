@@ -2,7 +2,6 @@
 #define _motor_h
 
 #include "zf_common_headfile.h"
-#include "pid.h"
 
 #define MOTOR2_A   TIM2_PWM_MAP0_CH1_A0  //定义3电机正转PWM引脚
 #define MOTOR2_B   TIM2_PWM_MAP0_CH2_A1  //定义3电机反转PWM引脚
@@ -17,17 +16,17 @@
 #define MOTOR4_B   TIM4_PWM_MAP1_CH4_D15  //定义4电机反转PWM引脚
 
 
-#define BRUSHLESS_1 TIM3_PWM_MAP3_CH1_C6
-#define BRUSHLESS_2 TIM3_PWM_MAP3_CH2_C7
+#define BRUSHLESS_1 TIM3_PWM_MAP3_CH1_C6  //定义无刷电机控制PWM引脚
+#define BRUSHLESS_2 TIM3_PWM_MAP3_CH2_C7  //定义无刷电机控制PWM引脚
 
 
 #define PWM_MAX 6000
 
-#define  MOTOR_PWM_MAX              6000        //OCR=95%,禁止满占空比输出，造成MOS损坏
-#define  MOTOR_PWM_MIN              -6000       //OCR=95%
+#define MOTOR_PWM_MAX              6000        //OCR=95%,禁止满占空比输出，造成MOS损坏
+#define MOTOR_PWM_MIN              -6000       //OCR=95%
 #define BRUSHLESS_PWM_MIN           500
 #define BRUSHLESS_PWM_MAX           1000
-#define  MOTOR_SPEED_MAX            3.0f       //电机最大转速(m/s) (0.017,8.04)
+#define MOTOR_SPEED_MAX            3.0f       //电机最大转速(m/s) (0.017,8.04)
 
 
 typedef struct
@@ -58,8 +57,5 @@ void MOTOR_SetPwmValue(int pwm_l, int pwm_r);
 void MOTOR_Side_SetPwmValue(int pwm_ls, int pwm_rs);
 void Brushless_Motor_SetPwmValue(int duty);
 
-int PWM_decision(float angular_velocity);
 
-void motor_control(void);
-void side_motor_control(void);
 #endif

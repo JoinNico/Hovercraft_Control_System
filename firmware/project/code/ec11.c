@@ -36,56 +36,8 @@ void EC11_Init(void)
     FLAG_EC11_KEY_DoubleClick = 0;          //EC11按键双击动作标志
 }
 
-//char Encoder_Scan(void)
-//{
-//    char result = 0;
-//    static uint8_t flag;
-//    uint8_t turn;
-//    EC11_A_Now = gpio_get_level(A8);
-//    EC11_B_Now = gpio_get_level(D8);
-//    EC11_Key = gpio_get_level(B12);
-//    if((EC11_A_Now == 1) && (EC11_B_Now == 1))
-//    {
-//        flag = 1;
-//    }
-//    if(flag == 1)
-//    {
-//        if(EC11_A_Now != EC11_B_Now)
-//        {
-//            turn = gpio_get_level(A8);
-//        }
-//        if((EC11_A_Now == 0) && (EC11_B_Now == 0))
-//        {
-//            flag = 0;
-//            if(turn)
-//            {
-//                result = 1;
-//                key_msg.updated_flag = 1;
-//            }
-//            else
-//            {
-//                result = -1;
-//                key_msg.updated_flag = 1;
-//            }
-//        }
-//    }
-//    if(EC11_Key == 0)
-//    {
-//        if(result == 1) {result = 2;key_msg.updated_flag = 1;}
-//        else if(result == -1) {result = -2;key_msg.updated_flag = 1;}
-//        else {result = 3;key_msg.updated_flag = 1;}
-//    }
-//    key_msg.key_id = result;
-//    char temp[10];
-//    sprintf(temp, "re=%d\n", result);
-//    debug_send_buffer(temp,10);
-//    return result;      //返回值的取值：   0：无动作； 1：顺时针； -1：逆时针； 2:按键按下并同时顺时针转动; -2:按键按下并同时逆时针转动; 3：按键按下无转动
-//
-//}
-
 char EC11_Scan()
 {
-
     char ScanResult = 0;    //返回编码器扫描结果，用于分析编码器的动作
                             //返回值的取值：   0：无动作；      1：正转；           -1：反转；
                             //                  2：只按下按键；    3：按着按键正转；   -3：按着按键反转
