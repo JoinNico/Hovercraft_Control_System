@@ -90,6 +90,7 @@ void dvp_camera_init(uint32 *image0_addr, uint32 *image1_addr, uint16 col_len, u
     /* VSYNC、HSYNC:High level active */
     DVP->CR0 |= RB_DVP_D8_MOD | RB_DVP_JPEG | RB_DVP_V_POLAR ;
     DVP->CR1 &= ~((RB_DVP_ALL_CLR)| RB_DVP_RCV_CLR);
+
     DVP->ROW_NUM = row_len;                    // rows行数
     DVP->COL_NUM = col_len;                    // cols列数
 

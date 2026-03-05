@@ -12,6 +12,12 @@ TaskHandle_t perception_task_handle;
 TaskHandle_t system_task_handle;
 TaskHandle_t ui_task_handle;
 
+// 指针数组，通过索引访问
+uint8_t (*frame_buffers[2])[MT9V03X_H][MT9V03X_W] = {
+    &mt9v03x_image0,
+    &mt9v03x_image1
+};
+
 float dat[4];
 
 /*
@@ -46,21 +52,21 @@ static void Control_Task(void *pvParameters)
             imu_update();           /* 读取 ICM20602 原始数据并融合  */
             EC11_Scan();            /* 扫描旋转编码器，更新菜单状态  */
 
-            smartcar_status.goal_PWM = PWM_decision(smartcar_status.goal_angular_velocity);         /* 根据姿态计算 PWM 输出量  */
-            motor_control();        /* 主驱动电机 PWM 输出  */
+            motor_control(smartcar_status.inner_target);        /* 主驱动电机 PWM 输出  */
 
 
             /* ── 10ms 环 ── */
             if (tick_count % 10 == 0)
             {
-                /* 图像分析，PID 角度闭环  */
+                smartcar_status.inner_target = OuterLoop_Update(get_image_error());/* 图像分析，PID 角度闭环  */
                 side_motor_control();   /* 横向辅助电机 PWM 输出 */
             }
 
             /* ── 100ms 环 ── */
             if (tick_count % 100 == 0)
             {
-                update_speed_and_distance();       /* 读编码器，PID 速度闭环  */
+                update_speed_and_distance();       /* 读编码器(注意：速度计算和运行周期有关)，PID 速度闭环  */
+                smartcar_status.base_PWM = SpeedLoop_Update(); // 更新 base_throttle
             }
 
             if (tick_count >= 1000)
@@ -77,24 +83,22 @@ static void Control_Task(void *pvParameters)
  */
 static void Perception_Task(void *pvParameters)
 {
-    uint32_t ulNotifiedValue;
-
-// Perception_Task 通知位
-#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
+//    uint32_t ulNotifiedValue;
+    uint32_t frame_idx;
+    variables_init();
     for (;;)
     {
         /* 阻塞等待摄像头帧通知 */
         xTaskNotifyWait(0x00,
-                        NOTIFY_PERCEPTION_FRAME,
-                        &ulNotifiedValue,
+                        0xFFFFFFFF,
+                        &frame_idx,
                         portMAX_DELAY);
+//        taskENTER_CRITICAL();
+        analyze_image(*frame_buffers[frame_idx], OSTU);    /* 图像处理  */
+//        taskEXIT_CRITICAL();
+        analyze_road();     /* 赛道元素识别   */
+        decision();         /* 路径决策，输出转向量  */
 
-        if (ulNotifiedValue & NOTIFY_PERCEPTION_FRAME)
-        {
-            analyze_image();    /* 图像预处理（二值化、滤波、中线计算等）   */
-            analyze_road();     /* 赛道元素识别   */
-            decision();         /* 路径决策，输出转向量  */
-        }
     }
 }
 
@@ -145,8 +149,7 @@ static void UI_Task(void *pvParameters)
             }
         }
 
-//        printf("/************任务堆栈历史剩余最小值****************/\r\n");
-//        printf("任务名称\t优先级\t堆栈剩余\r\n");
+//        printf("task \t prio \t stack \r\n");
 //        val = uxTaskGetStackHighWaterMark(control_task_handle);
 //        printf("Control:        %d      %d\r\n", PRIORITY_CONTROL, (int)val);
 //        val = uxTaskGetStackHighWaterMark(perception_task_handle);
@@ -226,11 +229,30 @@ void dvp_handler (void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+    static uint32_t frame_cnt = 0;
+    if (frame_cnt % 2)
+    {
+        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image0[0]);
+    }
+    else
+    {
+        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image1[0]);
+    }
+
+    frame_cnt++;
+
+    if (frame_cnt >= 1000)
+    {
+        frame_cnt = 0; // 防止溢出
+    }
+
+    uint8_t ready_frame_idx = (frame_cnt % 2) ? 1 : 0;
+
     if (perception_task_handle != NULL)
     {
         xTaskNotifyFromISR(perception_task_handle,
-                           NOTIFY_PERCEPTION_FRAME,
-                           eSetBits,
+                           ready_frame_idx,
+                           eSetValueWithOverwrite,
                            &xHigherPriorityTaskWoken);
     }
 

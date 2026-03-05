@@ -8,11 +8,12 @@
 
 #define IMAGE_HEIGHT 60 //120
 #define IMAGE_WIDTH  80 //160
+
 #define MID_LINE_VAL 40 //80
 #define SHIELD_LINE  18 //36
 
 //1就是不压缩，2就是压缩一倍
-#define ROW_RAR 1 //行向压缩一倍
+#define ROW_RAR 2 //行向压缩一倍
 #define COL_RAR 2 //列向压缩一倍 //1
 
 #define BARN_DIR    smartcar_param.barn_dir//1
@@ -54,8 +55,10 @@ extern int break_cnt;
 extern int left_edge[IMAGE_HEIGHT + 1];
 extern int right_edge[IMAGE_HEIGHT + 1];
 extern int middle_line[IMAGE_HEIGHT + 1];
+
 extern unsigned char binary_image[IMAGE_HEIGHT][IMAGE_WIDTH];
 extern unsigned char composite_image[IMAGE_HEIGHT][IMAGE_WIDTH];
+
 extern unsigned char dynamic_thresh;
 extern int left_lose;
 extern int right_lose;
@@ -94,11 +97,14 @@ static inline void set_curvity(float x)             {curvity = x;}
 static inline int get_last_line(void)               {return last_line;}
 static inline int get_available_line(void)      {return available_line;}
 static inline float get_curvity(void)               {return curvity;}
-static inline float get_image_error(void)           {return image_error;}
+static inline float get_image_error(void)
+{
+    return image_error;
+}
 static inline float get_image_middle_line(void) {return image_error;}
 static inline int get_break_cnt(void)   {return break_cnt;}
 float get_image_error_single(void);
-void analyze_image(void);
+void analyze_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode);
 void clear_process_circle_flag(void);
 void set_process_circle_flag(int dir);
 float get_variance();
@@ -115,4 +121,5 @@ circle_forecast_ty search_circle(void);
 void calc_image_error(void);
 void complex_image(void);
 int Circle_Exit_Judgement(void);
+void variables_init(void);
 #endif

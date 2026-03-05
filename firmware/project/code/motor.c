@@ -8,12 +8,6 @@ int rightside_duty = 0;
 int brushless_duty = 560;
 int motor_start_flag;
 
-//#define MOTOR_RDEAD_VAL -200
-//#define MOTOR_LDEAD_VAL 800//the max of duty 10000
-//
-//#define MOTOR_RDEAD_VAL -1000
-//#define MOTOR_LDEAD_VAL 1000//the max of duty 10000
-
 #define MOTOR_RDEAD_VAL 200
 #define MOTOR_LDEAD_VAL 200//the max of duty 10000
 int single_duty;
@@ -33,9 +27,6 @@ void motor_init(void)
 
     pwm_init(BRUSHLESS_1, 50, 0);
     pwm_init(BRUSHLESS_2, 50, 0);
-
-    motor_pid_init();
-    side_motor_pid_init();
 }
 
 
@@ -155,7 +146,6 @@ void Brushless_Motor_SetPwmValue(int duty)
 void MOTOR_SetPwmValue(int pwm_l, int pwm_r)
 {
     left_motor_duty(pwm_l);
-//    leftside_motor_duty(pwm_l);
     right_motor_duty(pwm_r);
 }
 

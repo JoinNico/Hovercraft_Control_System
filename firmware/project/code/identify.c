@@ -64,13 +64,6 @@ int right_circle_forecast_flag = 0;
 
 int detect_circle_image(void)
 {
-//#define CIRCLE_NUM smartcar_param.circle_num
-//#define CIRCLE_DIR(circle_num)  smartcar_param.circle_dir[circle_num]
-//#define CIRCLE_ENTRY_DISTANCE(circle_num) smartcar_param.circle_entrydis[circle_num]// 0.60
-//#define IN_CIRCLE_DISTANCE(circle_num) smartcar_param.circle_size[circle_num]//1.60
-//#define CIRCLE_READY_EXIT_DISTANCE(circle_num)   smartcar_param.circle_rdy_exitdis[circle_num]//  0.60
-//#define CIRCLE_EXIT_DISTANCE(circle_num) smartcar_param.circle_exitdis[circle_num] // 0.80
-//#define CIRCLE_EXIT_ANGLE(circle_num)   smartcar_param.circle_exit_angle[circle_num] //-10
 
     static int circle_cnt = 0;
     static int circle_flag = 0;

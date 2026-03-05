@@ -1,53 +1,11 @@
 #include "decision.h"
 
-float * angle_kp = &(angle_pid.K_p);
-float * angle_ki = &(angle_pid.K_i);
-float * angle_kd = &(angle_pid.K_d);
+float * angle_kp = &(angle_pid.Kp);
+float * angle_ki = &(angle_pid.Ki);
+float * angle_kd = &(angle_pid.Kd);
 
 SMARTCAR_STATUS smartcar_status;
 
-float angular_velocity_decision(float middle_line)
-{
-    float angular_velocity;
-    angle_pid.set_point = 0;
-
-    if(middle_line > IMAGE_WIDTH / 2)
-        middle_line = IMAGE_WIDTH / 2;
-    else if(middle_line < -IMAGE_WIDTH / 2)
-        middle_line = -IMAGE_WIDTH / 2;
-
-#if STEER_DIR//
-    angular_velocity = -positional_pid(&angle_pid, middle_line);
-#else
-    angular_velocity = positional_pid(&angle_pid, middle_line);
-#endif
-
-//    if(angle > STEER_MAX_ANGLE)
-//        angle = STEER_MAX_ANGLE;
-//    else if(angle < -STEER_MAX_ANGLE)
-//        angle = -STEER_MAX_ANGLE;
-    return angular_velocity;
-}
-
-int side_motor_decision(float middle_line)
-{
-    float goal_sidePWM;
-    image_pid.set_point = 0;
-
-    if(middle_line > IMAGE_WIDTH / 2)
-        middle_line = IMAGE_WIDTH / 2;
-    else if(middle_line < -IMAGE_WIDTH / 2)
-        middle_line = -IMAGE_WIDTH / 2;
-
-    goal_sidePWM = positional_pid(&image_pid, middle_line);
-
-
-//    if(angle > STEER_MAX_ANGLE)
-//        angle = STEER_MAX_ANGLE;
-//    else if(angle < -STEER_MAX_ANGLE)
-//        angle = -STEER_MAX_ANGLE;
-    return goal_sidePWM;
-}
 float straight_acceleration(int global_speed, float ratio, float thresh) {
 
       if(thresh == 0)
@@ -75,7 +33,7 @@ uint8 circle_times = 0;
 
 void decision(void)
 {
-    static float err = 0.0;
+//    static float err = 0.0;
 
     switch (get_road_type())
     {
@@ -86,9 +44,6 @@ void decision(void)
             *angle_kp = ANGLE_KP;
             *angle_ki = ANGLE_KI;
             *angle_kd = ANGLE_KD;
-            err = get_image_error();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
             break;
         case BEND:
             smartcar_status.motor_on = 1;
@@ -104,9 +59,6 @@ void decision(void)
             *angle_kp = ANGLE_KP;
             *angle_ki = ANGLE_KI;
             *angle_kd = ANGLE_KD;
-            err = get_image_error();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
             break;
         case CIRCLE_IN         :
             smartcar_status.motor_on = 1;
@@ -116,18 +68,12 @@ void decision(void)
             *angle_kp = ANGLE_KP * 1.0;
             *angle_ki = ANGLE_KI * 0.5;
             *angle_kd = ANGLE_KD * 0.5;
-            //err = get_circle_modify_err();
-            err = get_image_error();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
-
             break;
         case CIRCLE_FORECAST   :
         case CIRCLE_READY_ENTRY:
         case CIRCLE_ENTRY      :
         case CIRCLE_READY_EXIT :
         case CIRCLE_EXIT       :
-
             smartcar_status.motor_on = 1;
             smartcar_param.side_motor_flag = 1;
             smartcar_status.global_speed = 0.6f;
@@ -135,9 +81,9 @@ void decision(void)
             *angle_kp = ANGLE_KP * 0.8;
             *angle_ki = ANGLE_KI * 0.7;
             *angle_kd = ANGLE_KD * 0.7;
-            err = get_circle_modify_err();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
+// TODO
+//            err = get_circle_modify_err();
+
             break;
         case BLOCK_IN:
             smartcar_status.motor_on = 1;
@@ -146,9 +92,6 @@ void decision(void)
             *angle_kp = ANGLE_KP * 1.2;
             *angle_ki = ANGLE_KI * 1.2;
             *angle_kd = ANGLE_KD * 1.2;
-            err = get_image_error();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
             break;
         case FINISH:
             smartcar_status.motor_on = 1;
@@ -157,9 +100,6 @@ void decision(void)
             *angle_kp = ANGLE_KP;
             *angle_ki = ANGLE_KI;
             *angle_kd = ANGLE_KD;
-            err = get_image_error();
-            smartcar_status.goal_angular_velocity = angular_velocity_decision(err);
-            smartcar_status.goal_side_PWM = side_motor_decision(err);
             break;
         case FINISH_STOP:
             smartcar_status.motor_on = 0;

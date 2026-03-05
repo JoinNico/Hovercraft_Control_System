@@ -222,12 +222,12 @@ static void list1_show(uint8_t update_flag)
 //    sprintf(pitch_data, "Pitch = %.2f", imu.pit);
 //    sprintf(roll_data,  "Roll = %.2f",  imu.rol);
 
-    sprintf(gyro_data_x, "gyro_x = %.3f", imu.g[imu_x]);
-    sprintf(gyro_data_y, "gyro_y = %.3f", imu.g[imu_y]);
-    sprintf(gyro_data_z, "gyro_z = %.3f", imu.g[imu_z]);
+    sprintf(gyro_data_x, "gyro_x = %.3f         ", imu.g[imu_x]);
+    sprintf(gyro_data_y, "gyro_y = %.3f         ", imu.g[imu_y]);
+    sprintf(gyro_data_z, "gyro_z = %.3f         ", imu.g[imu_z]);
 
-    sprintf(speed_data, "speed m/s = %.2f", wheel_speed);
-    sprintf(distance_data, "distance m = %.3f", distance);
+    sprintf(speed_data, "speed m/s = %.3f       ", filter_speed);
+    sprintf(distance_data, "distance m = %.3f   ", filter_distance);
 
 //    ips200_show_string(0, 50, yaw_data);
 //    ips200_show_string(0, 70, pitch_data);
@@ -390,11 +390,9 @@ static void list3_show(uint8_t update_flag)
     }
     ips200_show_char(0, 20 + ui_select * (Option1[0].height + interval), '>');
 
-    //image_show();
-
     ips200_show_binary_image(0,40,(const uint8 *)binary_image,IMAGE_WIDTH,IMAGE_HEIGHT,80,60);
+//    ips200_show_gray_image(0, 40, mt9v03x_image1[0], MT9V03X_W, MT9V03X_H, MT9V03X_W, MT9V03X_H, 0);
 
-//    ips200_show_gray_image(0, 40, mt9v03x_image[0], MT9V03X_W, MT9V03X_H, MT9V03X_W, MT9V03X_H, 0);
     char str1[30];
     char str2[30];
     char str3[30];
@@ -543,9 +541,9 @@ void list4_proc(KEY_MSG* msg)
                     case 1: IMAGE_KP+=0.1;      if(IMAGE_KP >= PID_MAX) IMAGE_KP = PID_MAX;         break;
                     case 2: IMAGE_KI+=0.01;     if(IMAGE_KI >= PID_MAX) IMAGE_KI = PID_MAX;         break;
                     case 3: IMAGE_KD+=0.1;      if(IMAGE_KD >= PID_MAX) IMAGE_KD = PID_MAX;         break;
-                    case 4: VELOCITY_KP+=0.1;   if(VELOCITY_KP >= PID_MAX) VELOCITY_KP = PID_MAX;   break;
-                    case 5: VELOCITY_KI+=0.01;  if(VELOCITY_KI >= PID_MAX) VELOCITY_KI = PID_MAX;   break;
-                    case 6: VELOCITY_KD+=0.1;   if(VELOCITY_KD >= PID_MAX) VELOCITY_KD = PID_MAX;   break;
+                    case 4: SPEED_KP+=0.1;      if(SPEED_KP >= PID_MAX) SPEED_KP = PID_MAX;         break;
+                    case 5: SPEED_KI+=0.01;     if(SPEED_KI >= PID_MAX) SPEED_KI = PID_MAX;      break;
+                    case 6: SPEED_KD+=0.1;      if(SPEED_KD >= PID_MAX) SPEED_KD = PID_MAX;      break;
                     case 7: RATE_KP+=0.1;       if(RATE_KP >= PID_MAX) RATE_KP = PID_MAX;           break;
                     case 8: RATE_KI+=0.01;      if(RATE_KI >= PID_MAX) RATE_KI = PID_MAX;           break;
                     case 9: RATE_KD+=0.1;       if(RATE_KD >= PID_MAX) RATE_KD = PID_MAX;           break;
@@ -561,9 +559,9 @@ void list4_proc(KEY_MSG* msg)
                     case 1: IMAGE_KP-=0.1;      if(IMAGE_KP <= PID_MIN) IMAGE_KP = PID_MIN;         break;
                     case 2: IMAGE_KI-=0.01;     if(IMAGE_KI <= PID_MIN) IMAGE_KP = PID_MIN;         break;
                     case 3: IMAGE_KD-=0.1;      if(IMAGE_KD <= PID_MIN) IMAGE_KP = PID_MIN;         break;
-                    case 4: VELOCITY_KP-=0.1;   if(VELOCITY_KP <= PID_MIN) VELOCITY_KP = PID_MIN;   break;
-                    case 5: VELOCITY_KI-=0.01;  if(VELOCITY_KI <= PID_MIN) VELOCITY_KI = PID_MIN;   break;
-                    case 6: VELOCITY_KD-=0.1;   if(VELOCITY_KD <= PID_MIN) VELOCITY_KD = PID_MIN;   break;
+                    case 4: SPEED_KP-=0.1;   if(SPEED_KP <= PID_MIN) SPEED_KP = PID_MIN;   break;
+                    case 5: SPEED_KI-=0.01;  if(SPEED_KI <= PID_MIN) SPEED_KI = PID_MIN;   break;
+                    case 6: SPEED_KD-=0.1;   if(SPEED_KD <= PID_MIN) SPEED_KD = PID_MIN;   break;
                     case 7: RATE_KP-=0.1;       if(RATE_KP <= PID_MIN) RATE_KP = PID_MIN;           break;
                     case 8: RATE_KI-=0.01;      if(RATE_KI <= PID_MIN) RATE_KI = PID_MIN;           break;
                     case 9: RATE_KD-=0.1;       if(RATE_KD <= PID_MIN) RATE_KD = PID_MIN;           break;
@@ -600,9 +598,9 @@ static void list4_show(uint8_t update_flag)
     ips200_show_float(180, 39, IMAGE_KI, 2, 2);
     ips200_show_float(180, 55, IMAGE_KD, 2, 1);
 
-    ips200_show_float(180, 75, VELOCITY_KP, 2, 1);
-    ips200_show_float(180, 90, VELOCITY_KI, 2, 2);
-    ips200_show_float(180, 110, VELOCITY_KD, 2, 1);
+    ips200_show_float(180, 75, SPEED_KP, 2, 1);
+    ips200_show_float(180, 90, SPEED_KI, 2, 2);
+    ips200_show_float(180, 110, SPEED_KD, 2, 1);
 
     ips200_show_float(180, 130, RATE_KP, 2, 1);
     ips200_show_float(180, 150, RATE_KI, 2, 2);

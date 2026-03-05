@@ -84,7 +84,7 @@ int main (void)
     motor_init();
     icm20602_init();
     Encoder_Init();
-    adc_init(ADC1_IN9_B1,ADC_8BIT);
+    adc_init(ADC1_IN9_B1,ADC_12BIT);
     //gpio_init(B0, GPO, 0, GPO_PUSH_PULL);
     buzzer_init();
 

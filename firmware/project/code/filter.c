@@ -18,32 +18,11 @@ float SlidingFilter(float array[WIN_SIZE], float value)//滑动滤波
     }
     array[WIN_SIZE - 1] = value;
 
-    //去最大最小
-//    float max = - 50000.0f;
-//    float argmax = 0;
-//    float min = 50000.0f;
-//    float argmin = 0;
-//    for(int i = 0; i < WIN_SIZE; i++)
-//    {
-//        if(array[i] > max)
-//        {
-//            max = array[i];
-//            argmax = (float)i;
-//        }
-//        if(array[i] < min)
-//        {
-//            min = array[i];
-//            argmin = (float)i;
-//        }
-//    }
-
     //加权
     float result = 0.0f;
     float weight_sum = 0.0f;
     for(uint8 i = 0; i < WIN_SIZE; i++)
     {
-//        if(i == argmin || i == argmax)
-//            continue;
         result += filter_weight[i] * array[i];
         weight_sum += filter_weight[i];
     }
@@ -76,6 +55,34 @@ float LowPassFilter(float array[WIN_SIZE], float value)//低通滤波
     }
     return result;
 }
+
+/**
+ * @brief     一阶低通滤波器（基于截止频率）
+ *
+ * @param lpf           指向滤波器状态变量的指针（上一次滤波输出值）
+ * @param val           当前输入值（原始测量值）
+ * @param cut_off_freq  截止频率 (Hz)，决定滤波器的响应速度和平滑程度
+ *                      - 频率越低，滤波效果越强，延迟越大
+ *                      - 频率越高，响应越快，但滤波效果减弱
+ * @param sample_freq   采样频率 (Hz)，即函数被调用的频率
+ *
+ * @return float        滤波后的输出值
+ *
+ * @note
+  *   滤波器计算公式：y[n] = y[n-1] + α * (x[n] - y[n-1])
+  *   其中 α = 1 / (1 + 1/(2π * fc * Ts))，Ts = 1/sample_freq
+ *
+  *   使用示例：
+ * static float filtered_value = 0;
+ * float raw_data = get_sensor_value();
+ * filtered_value = first_order_lpf(&filtered_value, raw_data, 5.0f, 100.0f); // 截止频率5Hz，采样频率100Hz
+ *
+ *
+ * @attention
+ * 1. lpf指针必须指向有效的静态变量或全局变量，用于保持滤波器状态
+ * 2. 确保sample_freq远大于cut_off_freq（通常至少2倍，建议5-10倍）
+ * 3. 滤波器初始化时，建议将*lpf设置为第一次输入值
+ */
 
 float first_order_lpf(float * lpf, float val, float cut_off_freq, float sample_freq)
 {

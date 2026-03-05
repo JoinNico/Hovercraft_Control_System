@@ -26,11 +26,15 @@
 #define IMAGE_KI             smartcar_param.image_ki
 #define IMAGE_KD             smartcar_param.image_kd
 
+#define STEER_DIR            1
+#define CLAMP(x, lo, hi)     ((x) < (lo) ? (lo) : ((x) > (hi) ? (hi) : (x)))
+
 extern _pid angle_pid, rate_pid, image_pid, speed_pid;
 
 void PID_param_init(void);
-int PWM_decision(float angular_velocity);
-void motor_control(void);
+float OuterLoop_Update(float middle_line_err);
+float InnerLoop_Update(float Outer_Result);
+float SpeedLoop_Update(void);
+void motor_control(float Outer_Result);
 void side_motor_control(void);
-
 #endif /* CONTROL_H_ */

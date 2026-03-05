@@ -155,6 +155,7 @@ void DVP_IRQHandler(void)
 //        camera_dvp_handler();
         extern void dvp_handler (void);
         dvp_handler();
+
         DVP->IFR &= ~RB_DVP_IF_FRM_DONE;
     }
 }

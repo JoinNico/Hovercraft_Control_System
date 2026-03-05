@@ -232,7 +232,7 @@ void lq_sobelAutoThreshold(unsigned char imageIn[IMAGE_HEIGHT][IMAGE_WIDTH],
     }
 }
 
-void preprocess_image(unsigned char mode)
+void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
 {
     int m = 0, n = 0;
     unsigned char image_use[IMAGE_HEIGHT][IMAGE_WIDTH];
@@ -242,7 +242,7 @@ void preprocess_image(unsigned char mode)
         n = 0;
         for (int j = 0; j < MT9V03X_W; j += COL_RAR)
         {
-            image_use[m][n] = mt9v03x_image[i][j];
+            image_use[m][n] = img[i][j];
             n++;
         }
         m++;
@@ -1560,23 +1560,6 @@ void GetWeightMembership(float real_speed, float w[DIMENSION])//ÇóÄ£ºıÁ¥Êô¶È,ÓÃË
     w[3] = Fuzzify_Right(real_speed, UPPER_LIMIT, SUPER_LIMIT);
 }
 
-
-//void calc_image_error(void)
-//{
-//  float result = 0.0f;
-//  float weight_sum = 0.0f;
-//  for(unsigned char i = IMAGE_HEIGHT - 10; i > get_last_line(); i--) {
-//      result += image_row_weight[i] * middle_line[i];
-//      weight_sum += image_row_weight[i];
-//  }
-//  if(weight_sum != 0)
-//      result = result / weight_sum;
-//  else
-//      result = MID_LINE_VAL;
-//  result -= MID_LINE_VAL;
-//  image_error = result;
-//}
-
 void calc_image_error(void)//ÉãÏñÍ·ÄâºÏÖĞÏß
 {
     float mid_val = 0.0f;
@@ -1585,7 +1568,7 @@ void calc_image_error(void)//ÉãÏñÍ·ÄâºÏÖĞÏß
     float w[DIMENSION] = {0};
 
 #if 1
-    GetWeightMembership(wheel_speed, w);//»ñÈ¡w1 w2 w3
+    GetWeightMembership(filter_speed, w);//»ñÈ¡w1 w2 w3
 #else
     w[0] = 0.0f;
     w[1] = 0.0f;
@@ -1747,17 +1730,6 @@ void complex_image(void)
 
 #endif
 }
-
-//void send_binary_image(void)
-//{
-//    uart_putchar(UART_1,0x00);
-//    uart_putchar(UART_1,0xff);//·¢ËÍÃüÁî
-//    uart_putchar(UART_1,0x01);
-//    uart_putchar(UART_1,0x01);
-//    uart_putbuff(UART_1, (uint8 *)mt9v03x_image, 60 * 160);  //·¢ËÍÍ¼Ïñ
-//    printf("%6.2f", image_error);
-//    printf("%03d", break_cnt);
-//}
 
 void calculate_road_width()
 {
@@ -2234,10 +2206,9 @@ int col_scan_all_white(int start_row)
 
 int process_circle_flag = -1;
 
-void analyze_image(void)
+void analyze_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
 {
-    variables_init();
-    preprocess_image(OSTU);     //Ñ¹ËõÍ¼Ïñ¡¢¶şÖµ»¯Í¼Ïñ
+    preprocess_image(img, mode);     //Ñ¹ËõÍ¼Ïñ¡¢¶şÖµ»¯Í¼Ïñ
     search_border_line_and_Mid_line();
     calc_middle_line_curvity();
     calc_middleline_variance();

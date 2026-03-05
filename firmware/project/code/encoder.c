@@ -1,18 +1,12 @@
 #include "encoder.h"
 
-int16 encoder=0;
-int32 int_dis=0;
-float distance;
-float wheel_speed;
-
-float voltage;
-uint16 raw_voltage;
-
+float filter_distance, filter_speed;
 WheelStruct WheelStr;
 
 void Encoder_Init(void)
 {
-    encoder_quad_init(ENCODER_QUADDEC_L, ENCODER_QUADDEC_A_L, ENCODER_QUADDEC_B_L);   // 初始化左编码器 正交解码编码器模式
+    // 初始化左编码器（正交解码模式）
+    encoder_quad_init(ENCODER_QUADDEC_L, ENCODER_QUADDEC_A_L, ENCODER_QUADDEC_B_L);
 
     //测速轮模型初始化
     WheelStr.EncoderLine =  1024.0f;                          //编码器线数
@@ -22,34 +16,30 @@ void Encoder_Init(void)
     WheelStr.CloseLoop = 1;                              //默认闭环模式
 }
 
-void encoder_handler (void)
-{
-    encoder  = encoder_get_count(ENCODER_QUADDEC_L)/2;               // 获取速度
-    encoder_clear_count(ENCODER_QUADDEC_L);                         // 清空编码器计数
-
-    int_dis += (int32)encoder;
-}
-
 void update_speed_and_distance(void)
 {
-    static float win_1[WIN_SIZE] = { 0 };
-    float speed;
-    encoder_handler();
+    int16 pulses = 0;
+    static int32 total_pulses  = 0;
 
-    //  速度系数    -> m/s
-    //  距离系数    -> m
-    distance = (float)(int_dis * PI * WheelStr.DiameterWheel)/ WheelStr.EncoderLine / WheelStr.ReductionRatio;
+    // 读取编码器计数
+    pulses = encoder_get_count(ENCODER_QUADDEC_L) / 2;
+    // 清空编码器计数
+    encoder_clear_count(ENCODER_QUADDEC_L);
 
-    speed = (float)(encoder * PI * WheelStr.DiameterWheel)/ ENCODER_CONTROL_CYCLE / WheelStr.EncoderLine / WheelStr.ReductionRatio;
+    // 累积总脉冲数（用于距离计算）
+    total_pulses += (int32)pulses;
 
-    wheel_speed = LowPassFilter(win_1, speed);
+    static float distance_filter_buf[WIN_SIZE] = { 0 };
+    float distance, speed;
 
-    pidStr.vi_FeedBack = encoder;
-}
+    // 距离系数 -> m
+    distance = (float)(total_pulses * PI * WheelStr.DiameterWheel)
+               / WheelStr.EncoderLine / WheelStr.ReductionRatio;
+    filter_distance = SlidingFilter(distance_filter_buf, distance);
 
-void update_voltage(void)
-{
-    raw_voltage = adc_mean_filter_convert(ADC1_IN9_B1,10);
-    voltage = raw_voltage*19.06/256.0;
+    // 速度系数 -> m/s
+    speed = (float)(pulses * PI * WheelStr.DiameterWheel)
+            / ENCODER_CONTROL_CYCLE / WheelStr.EncoderLine / WheelStr.ReductionRatio;
 
+    filter_speed = first_order_lpf(&filter_speed, speed, 10, 100);
 }

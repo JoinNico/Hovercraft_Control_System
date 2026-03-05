@@ -22,7 +22,12 @@
 #define STACK_SYSTEM            128
 #define STACK_UI                512
 
+// Perception_Task ֪ͨλ
+#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
+
 extern float dat[4];
+extern volatile uint8_t active_idx;
+extern volatile uint8_t ready_idx;
 
 void FreeRTOS_Start(void);
 

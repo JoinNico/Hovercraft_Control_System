@@ -157,6 +157,7 @@
 #include "identify.h"
 #include "decision.h"
 #include "vofa.h"
+#include "voltage.h"
 //===================================================用户自定义文件===================================================
 
 #endif

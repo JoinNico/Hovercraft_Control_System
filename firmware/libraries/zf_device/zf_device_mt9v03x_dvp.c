@@ -65,7 +65,8 @@
 #include "zf_device_config.h"
 
 volatile uint8 mt9v03x_finish_flag = 0;                                                  // 一场图像采集完成标志位
-uint8 mt9v03x_image[MT9V03X_H][MT9V03X_W];
+uint8 mt9v03x_image0[MT9V03X_H][MT9V03X_W];
+uint8 mt9v03x_image1[MT9V03X_H][MT9V03X_W];
 
 static m9v03x_type_enum     mt9v03x_type;
 static uint16               mt9v03x_version = 0x00;
@@ -468,7 +469,7 @@ uint8 mt9v03x_init (void)
             MT9V03X_PCLK_PIN, MT9V03X_VSY_PIN, MT9V03X_HERF_PIN);
 
     // DVP接口初始化
-    dvp_camera_init((uint32 *)&mt9v03x_image[0], NULL, MT9V03X_W*MT9V03X_H, 1);
+    dvp_camera_init((uint32 *)&mt9v03x_image0[0],NULL, MT9V03X_IMAGE_SIZE, 0);
     return return_state;
 
 }
