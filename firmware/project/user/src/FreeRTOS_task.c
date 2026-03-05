@@ -12,6 +12,8 @@ TaskHandle_t perception_task_handle;
 TaskHandle_t system_task_handle;
 TaskHandle_t ui_task_handle;
 
+static QueueHandle_t perception_queue = NULL;
+
 // 指针数组，通过索引访问
 uint8_t (*frame_buffers[2])[MT9V03X_H][MT9V03X_W] = {
     &mt9v03x_image0,
@@ -32,6 +34,7 @@ static void Control_Task(void *pvParameters)
 {
     uint32_t ulNotifiedValue;
     uint32_t tick_count = 0;
+    PerceptionResult_t perception_result = {0.0f};  /* 保存最近一次有效结果 */
 
 // Control_Task 通知位
 #define NOTIFY_CONTROL_TICK     (1UL << 0)
@@ -58,20 +61,25 @@ static void Control_Task(void *pvParameters)
             /* ── 10ms 环 ── */
             if (tick_count % 10 == 0)
             {
-                smartcar_status.inner_target = OuterLoop_Update(get_image_error());/* 图像分析，PID 角度闭环  */
-                side_motor_control();   /* 横向辅助电机 PWM 输出 */
+
+                PerceptionResult_t tmp;
+                if (xQueueReceive(perception_queue, &tmp, 0) == pdTRUE)
+                {
+                    perception_result = tmp;    /* 有新帧，更新 */
+                }
+                /* 无新帧时 perception_result 保持上次值，控制连续不中断 */
+
+                smartcar_status.inner_target = OuterLoop_Update(perception_result.image_error);/* 图像分析，PID 角度闭环  */
+                side_motor_control(perception_result.image_error);   /* 横向辅助电机 PWM 输出 */
+
             }
 
             /* ── 100ms 环 ── */
             if (tick_count % 100 == 0)
             {
-                update_speed_and_distance();       /* 读编码器(注意：速度计算和运行周期有关)，PID 速度闭环  */
+                gpio_toggle_level(C4);
+                update_speed_and_distance();                   /* 读编码器(注意：速度计算和运行周期有关)，PID 速度闭环  */
                 smartcar_status.base_PWM = SpeedLoop_Update(); // 更新 base_throttle
-            }
-
-            if (tick_count >= 1000)
-            {
-                tick_count = 0; // 防止溢出
             }
         }
     }
@@ -83,8 +91,11 @@ static void Control_Task(void *pvParameters)
  */
 static void Perception_Task(void *pvParameters)
 {
-//    uint32_t ulNotifiedValue;
     uint32_t frame_idx;
+
+    TickType_t start_time, end_time;
+    uint32_t processing_time_ms;
+
     variables_init();
     for (;;)
     {
@@ -93,11 +104,25 @@ static void Perception_Task(void *pvParameters)
                         0xFFFFFFFF,
                         &frame_idx,
                         portMAX_DELAY);
-//        taskENTER_CRITICAL();
+        // 开始计时
+        start_time = xTaskGetTickCount();  // 毫秒级
+
         analyze_image(*frame_buffers[frame_idx], OSTU);    /* 图像处理  */
-//        taskEXIT_CRITICAL();
         analyze_road();     /* 赛道元素识别   */
         decision();         /* 路径决策，输出转向量  */
+
+        // 结束计时
+        end_time = xTaskGetTickCount();
+        processing_time_ms = (end_time - start_time) * portTICK_PERIOD_MS;
+        // 打印或记录时间
+//        printf("Processing time: %lu ms\r\n", processing_time_ms);
+
+        /* ── 三步全部完成，打包结果写入队列 ── */
+        PerceptionResult_t result;
+        result.image_error = get_image_error();
+
+        /* xQueueOverwrite 专用于深度为1的队列，满时覆盖不阻塞 */
+        xQueueOverwrite(perception_queue, &result);
 
     }
 }
@@ -142,9 +167,9 @@ static void UI_Task(void *pvParameters)
             {
                 if (ui_list[i].cb)//执行UI对应的回调函数
                 {
-                    taskENTER_CRITICAL();
+//                    taskENTER_CRITICAL();
                     ui_list[i].cb(&key_msg);
-                    taskEXIT_CRITICAL();
+//                    taskEXIT_CRITICAL();
                 }
             }
         }
@@ -164,6 +189,10 @@ static void UI_Task(void *pvParameters)
 void FreeRTOS_Start(void)
 {
     taskENTER_CRITICAL();
+
+    /* ── 创建感知结果队列，深度 1，元素大小为 PerceptionResult_t ── */
+    perception_queue = xQueueCreate(1, sizeof(PerceptionResult_t));
+
     xTaskCreate(Control_Task,
                 "Control",
                 STACK_CONTROL,
@@ -230,31 +259,28 @@ void dvp_handler (void)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     static uint32_t frame_cnt = 0;
-    if (frame_cnt % 2)
-    {
-        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image0[0]);
-    }
-    else
-    {
-        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image1[0]);
-    }
-
-    frame_cnt++;
-
-    if (frame_cnt >= 1000)
-    {
-        frame_cnt = 0; // 防止溢出
-    }
-
-    uint8_t ready_frame_idx = (frame_cnt % 2) ? 1 : 0;
+//    if (frame_cnt % 2)
+//    {
+//        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image0[0]);
+//    }
+//    else
+//    {
+//        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image1[0]);
+//    }
+//    uint8_t ready_frame_idx = (frame_cnt % 2) ? 1 : 0;
+//
+    // 切换DMA缓冲区
+    DVP->DMA_BUF0 = (uint32_t)(frame_cnt % 2 ? mt9v03x_image1 : mt9v03x_image0);
 
     if (perception_task_handle != NULL)
     {
         xTaskNotifyFromISR(perception_task_handle,
-                           ready_frame_idx,
+                           frame_cnt % 2,
                            eSetValueWithOverwrite,
                            &xHigherPriorityTaskWoken);
     }
+
+    frame_cnt++;
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }

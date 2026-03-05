@@ -391,6 +391,7 @@ static void list3_show(uint8_t update_flag)
     ips200_show_char(0, 20 + ui_select * (Option1[0].height + interval), '>');
 
     ips200_show_binary_image(0,40,(const uint8 *)binary_image,IMAGE_WIDTH,IMAGE_HEIGHT,80,60);
+
 //    ips200_show_gray_image(0, 40, mt9v03x_image1[0], MT9V03X_W, MT9V03X_H, MT9V03X_W, MT9V03X_H, 0);
 
     char str1[30];

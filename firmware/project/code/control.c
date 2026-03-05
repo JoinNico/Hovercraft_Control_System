@@ -113,11 +113,11 @@ static float SideLoop_Update(float middle_line_err)
 
 /* @brief 横向电机闭环控制函数
  */
-void side_motor_control(void)
+void side_motor_control(float err)
 {
     if(smartcar_param.side_motor_flag)
     {
-        smartcar_status.goal_side_PWM = SideLoop_Update(get_image_error());
+        smartcar_status.goal_side_PWM = SideLoop_Update(err);
 
         if (smartcar_status.goal_side_PWM > 0)
         {

@@ -12,7 +12,7 @@
 
 /* ─────────────────────────── 任务优先级 ─────────────────────────── */
 #define PRIORITY_CONTROL        12
-#define PRIORITY_PERCEPTION     10
+#define PRIORITY_PERCEPTION     11
 #define PRIORITY_SYSTEM          3
 #define PRIORITY_UI              2
 
@@ -22,8 +22,10 @@
 #define STACK_SYSTEM            128
 #define STACK_UI                512
 
-// Perception_Task 通知位
-#define NOTIFY_PERCEPTION_FRAME (1UL << 0)
+typedef struct
+{
+    float image_error;    /* 图像横向偏差，供角度环使用 */
+} PerceptionResult_t;
 
 extern float dat[4];
 extern volatile uint8_t active_idx;

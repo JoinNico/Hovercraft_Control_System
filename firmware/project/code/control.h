@@ -36,5 +36,5 @@ float OuterLoop_Update(float middle_line_err);
 float InnerLoop_Update(float Outer_Result);
 float SpeedLoop_Update(void);
 void motor_control(float Outer_Result);
-void side_motor_control(void);
+void side_motor_control(float err);
 #endif /* CONTROL_H_ */

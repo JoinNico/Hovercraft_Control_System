@@ -290,8 +290,8 @@ void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
 void search_border_line_and_Mid_line(void)
 {
     //printf("image_analyze start\n\r");
-    int break_flag = 0;
-    int break_point[2] = {0, 59};
+//    int break_flag = 0;
+//    int break_point[2] = {0, 59};
     for (int i = IMAGE_HEIGHT - 1; i > IMAGE_HEIGHT - 10; i--)
     {
         int j = 0;
@@ -1697,10 +1697,10 @@ void complex_image(void)
         right_line = right_line < 1 ? 1 : right_line;
         binary_image[i][right_line] = 0;
     }
-    float camera_midline = get_image_middle_line() + IMAGE_WIDTH / 2;
-    float error = camera_midline - MID_LINE_VAL;
+//    float camera_midline = get_image_middle_line() + IMAGE_WIDTH / 2;
+//    float error = camera_midline - MID_LINE_VAL;
     int last_line = get_last_line();
-    int available_line = get_available_line();
+//    int available_line = get_available_line();
     int mid_line = (int) get_image_middle_line();
     mid_line = mid_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : mid_line;
     mid_line = mid_line < 1 ? 1 : mid_line;
@@ -1715,17 +1715,8 @@ void complex_image(void)
     binary_image[42][mid_line + 1] = 0;
     for (int i = 0; i < IMAGE_WIDTH; i++)
     {
-        //for(int j = 0; j <= last_line; j++)
         binary_image[last_line][i] = 0;
     }
-    /*for(int i = 0; i < IMAGE_WIDTH; i++)
-    {
-            for(int j = IMAGE_HEIGHT - 10; j <= IMAGE_HEIGHT; j++)
-            binary_image[j][i] = 0;
-    }*/
-//        for (int a=0;a<60;a++){
-//            ips200_draw_point(road_width[a],a,RGB565_RED);
-//        }
 
 
 #endif
