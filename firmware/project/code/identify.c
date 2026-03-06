@@ -1,314 +1,315 @@
+/**
+ * @file    identify.c
+ * @brief   道路类型识别模块（重构版）
+ *
+ * 主要变更：
+ *   1. 所有原散列全局变量（left_lose / right_lose / barn_exist_flag /
+ *      circle_image_process_complete / circle_entry_process /
+ *      in_circle_mending / circle_exit_detect / circle_exit_process /
+ *      is_cross / modify_err）均通过 g_img 结构体字段访问。
+ *   2. image_circle_activate() / image_circle_reset() /
+ *      image_block_reset() / image_search_block()
+ *      取代原 set_process_circle_flag() / clear_process_circle_flag() /
+ *      clear_process_block_flag() / search_block()。
+ *   3. 圆环方向判断从裸数字 0/1/-1 改为 ROAD_DIR_LEFT/RIGHT/NONE 枚举。
+ *   4. 距离、锁、参数等非图像接口保持不变。
+ */
+
 #include "identify.h"
 
-#define LENGTH_CTL      smartcar_param.length_control
-#define LENGTH_TOTAL    smartcar_param.length_total
+/* ===== 模块状态 ===== */
+int   road_type      = BEND;
+int   last_road_type = BEND;
+float circle_modify_err = 0.0f;
+int   cross_state    = 0;
+int   ele_lock       = _BEND;
 
-int road_type = BEND;
-int last_road_type;
-float circle_modify_err = 0;
+/* 圆环预判连续帧计数 */
+int left_circle_forecast_flag  = 0;
+int right_circle_forecast_flag = 0;
 
-int cross_state = 0;
+/* ===== 里程计数（由外部 length_init 初始化） ===== */
+//static int length_circle1 = 0;
+//static int length_circle2 = 0;
+//static int length_barn    = 0;
+//static int length_block   = 0;
+//static int length_break   = 0;
 
-int ele_lock = _BEND;
+/* ===== 圆环参数 ===== */
+#define CIRCLE_NUM                  1
+#define CIRCLE_DIR(n)               smartcar_param.circle_dir[(n)]
+#define CIRCLE_FORECAST_DISTANCE    0.6f
+#define IN_CIRCLE_DISTANCE          2.5f
+#define CIRCLE_READY_EXIT_DISTANCE  0.5f
+#define CIRCLE_EXIT_ANGLE           (-10)
 
+/* ===== 车库参数 ===== */
+#define STOPLINE_DIS_CTRL       25.0f
+#define STOPLINE_IN_DISTANCE    1.0f
 
-int length_circle1 ;
-int length_circle2 ;
-int length_barn ;
+/* ===== 路障参数 ===== */
+#define IN_BLOCK_DISTANCE   0.7f
+#define BLOCK_DIS_CTRL      1.0f
 
-int length_block ;
-int length_break;
+/*===========================================================================
+ * 互斥锁
+ *=========================================================================*/
+int get_lock(void)  { return ele_lock; }
+void set_lock(int lock)  { ele_lock = lock; }
+void clear_lock(void)    { ele_lock = _BEND; }
 
+/*===========================================================================
+ * 里程初始化
+ *=========================================================================*/
 int length_init(void)
 {
-    circle_times = smartcar_param.circle_num;
-    smartcar_param.circle_num = smartcar_param.circle_num + smartcar_param.circle_dir[1];
-
+//    circle_times = smartcar_param.circle_num;
+    smartcar_param.circle_num =
+        smartcar_param.circle_num + smartcar_param.circle_dir[1];
     return 0;
 }
 
-int get_lock(void)
-{
-  return ele_lock;
-}
-
-void set_lock(int lock)
-{
-  ele_lock = lock;
-//  alarm_times(1,400);
-}
-
-void clear_lock(void)
-{
-  ele_lock = _BEND;
-//  alarm_times(3,100);
-}
-
-/*----------------------------图像检测圆环---------------------------------------------*/
-int left_circle_forecast_flag = 0;
-int right_circle_forecast_flag = 0;
-
-#define LEFT_CIRCLE     0
-#define RIGHT_CIRCLE    1
-
-#define CIRCLE_NUM                      1
-#define CIRCLE_DIR(circle_num)          smartcar_param.circle_dir[circle_num]
-#define CIRCLE_FORECAST_DISTANCE        0.6
-#define CIRCLE_ENTRY_DISTANCE           0.60 //0.2
-#define IN_CIRCLE_DISTANCE              2.5f //2.4
-#define CIRCLE_READY_EXIT_DISTANCE      0.5f
-#define CIRCLE_EXIT_DISTANCE            0.00
-#define CIRCLE_EXIT_ANGLE               -10
-
-#define CIRCLE_DIS_CTRL                 20.0
-
+/*===========================================================================
+ * 圆环识别状态机
+ *
+ * 图像接口变更对照：
+ *   旧                              新
+ *   circle_forecast.circle_fore_dir  IMG_CIRCLE_FORE_DIR（值类型：RoadDir）
+ *   left_lose                        IMG_LEFT_LOSE
+ *   right_lose                       IMG_RIGHT_LOSE
+ *   circle_image_process_complete    g_img.circle_proc_complete
+ *   circle_entry_process             g_img.circle_entry_active
+ *   in_circle_mending                g_img.circle_mending_active
+ *   circle_exit_process              g_img.circle_exit_active
+ *   circle_exit_detect               g_img.circle_exit_detect
+ *   set_process_circle_flag(dir)     image_circle_activate(dir)
+ *   clear_process_circle_flag()      image_circle_reset()
+ *   modify_err                       g_img.modify_err
+ *=========================================================================*/
 int detect_circle_image(void)
 {
+    static int   circle_cnt     = 0;
+    static int   circle_flag    = 0;
+    static float circle_dis_rec = 0.0f;
 
-    static int circle_cnt = 0;
-    static int circle_flag = 0;
-    static float circle_dis_rec = 0;
+    /* 当前圆环方向：ROAD_DIR_LEFT(0) 或 ROAD_DIR_RIGHT(1) */
+    RoadDir circle_dir = (RoadDir)CIRCLE_DIR(circle_cnt);
 
+    /* 互斥锁检查 */
+    if (get_lock() != _BEND && get_lock() != _CIRCLE)
+        return 0;
 
-    int circle_dir = 0;
-    circle_dir = CIRCLE_DIR(circle_cnt);// 0 -->left    1-->right
-
-    if(((get_lock() != _BEND && get_lock() != _CIRCLE)) /*|| (get_distance() < CIRCLE_DIS_CTRL)*/)
-      return 0;
-    switch(circle_flag)
+    switch (circle_flag)
     {
+        /* ── 待机：连续帧预判确认 ── */
         case 0:
-            if(0 == circle_forecast.circle_fore_dir && CIRCLE_DIR(circle_cnt) == 0 && left_circle_forecast_flag <= 0)
+            /* 左环预判 */
+            if (IMG_CIRCLE_FORE_DIR == ROAD_DIR_LEFT &&
+                circle_dir == ROAD_DIR_LEFT &&
+                left_circle_forecast_flag <= 0)
             {
                 left_circle_forecast_flag--;
-                if(left_circle_forecast_flag < -1)
+                if (left_circle_forecast_flag < -1)
                 {
                     left_circle_forecast_flag = 1;
                     circle_dis_rec = get_distance();
-                    circle_flag = CIRCLE_FORECAST;
+                    circle_flag    = CIRCLE_FORECAST;
                     set_lock(_CIRCLE);
                 }
             }
-            else if(left_circle_forecast_flag <= 0)
+            else if (left_circle_forecast_flag <= 0)
             {
                 left_circle_forecast_flag = 0;
             }
 
-            if(1 == circle_forecast.circle_fore_dir && CIRCLE_DIR(circle_cnt) == 1 && right_circle_forecast_flag <= 0)
+            /* 右环预判 */
+            if (IMG_CIRCLE_FORE_DIR == ROAD_DIR_RIGHT &&
+                circle_dir == ROAD_DIR_RIGHT &&
+                right_circle_forecast_flag <= 0)
             {
                 right_circle_forecast_flag--;
-                if(right_circle_forecast_flag < -1)
+                if (right_circle_forecast_flag < -1)
                 {
                     right_circle_forecast_flag = 1;
                     circle_dis_rec = get_distance();
-                    circle_flag = CIRCLE_FORECAST;
+                    circle_flag    = CIRCLE_FORECAST;
                     set_lock(_CIRCLE);
                 }
             }
-            else if(right_circle_forecast_flag <= 0)
+            else if (right_circle_forecast_flag <= 0)
             {
                 right_circle_forecast_flag = 0;
             }
-        break;
+            break;
 
+        /* ── 预判阶段：激活图像补线，等待行驶一段距离 ── */
         case CIRCLE_FORECAST:
-            set_process_circle_flag(circle_dir);
-            if(get_distance() - circle_dis_rec > CIRCLE_FORECAST_DISTANCE
-               && (left_circle_forecast_flag == 1 || right_circle_forecast_flag == 1))
+            image_circle_activate((int)circle_dir); /* 取代 set_process_circle_flag */
+            if ((get_distance() - circle_dis_rec) > CIRCLE_FORECAST_DISTANCE &&
+                (left_circle_forecast_flag == 1 || right_circle_forecast_flag == 1))
             {
                 circle_flag = CIRCLE_READY_ENTRY;
-//                alarm_times(1, 50);
-
-                left_circle_forecast_flag = 0;
+                left_circle_forecast_flag  = 0;
                 right_circle_forecast_flag = 0;
             }
-        break;
+            break;
 
+        /* ── 准入阶段：等待单侧边界大量丢失（即到达入口） ── */
         case CIRCLE_READY_ENTRY:
-            if(((left_lose > 10) && right_lose < 5 && CIRCLE_DIR(circle_cnt) == 0)||
-               ((right_lose > 10) && (left_lose < 5) && CIRCLE_DIR(circle_cnt) == 1))
+            if ((IMG_LEFT_LOSE  > 10 && IMG_RIGHT_LOSE < 5  && circle_dir == ROAD_DIR_LEFT) ||
+                (IMG_RIGHT_LOSE > 10 && IMG_LEFT_LOSE  < 5  && circle_dir == ROAD_DIR_RIGHT))
             {
-                circle_flag = CIRCLE_ENTRY;
-//                alarm_times(1, 50);
+                circle_flag  = CIRCLE_ENTRY;
                 circle_dis_rec = get_distance();
+                g_img.circle_entry_active = 1; /* 取代 circle_entry_process = 1 */
+            }
+            break;
 
-
-                circle_entry_process = 1;
-           }
-        break;
-
+        /* ── 入环阶段：等待图像补线完成 ── */
         case CIRCLE_ENTRY:
-            if (/*(get_distance() - circle_dis_rec) > CIRCLE_ENTRY_DISTANCE(circle_cnt) ||*/1 == circle_image_process_complete)
+            if (g_img.circle_proc_complete == 1) /* 取代 circle_image_process_complete */
             {
                 circle_flag = CIRCLE_IN;
-//                alarm_times(1, 50);
                 circle_dis_rec = get_distance();
-                circle_entry_process = 0;
-                in_circle_mending = 1;
-           }
-        break;
+                g_img.circle_entry_active  = 0;  /* 取代 circle_entry_process = 0 */
+                g_img.circle_mending_active = 1; /* 取代 in_circle_mending = 1 */
+            }
+            break;
 
+        /* ── 环中阶段：行驶足够距离且边界恢复后转出环 ── */
         case CIRCLE_IN:
-            if (left_lose > 15 && (get_distance() - circle_dis_rec) >  IN_CIRCLE_DISTANCE)
+            if (IMG_LEFT_LOSE > 15 &&
+                (get_distance() - circle_dis_rec) > IN_CIRCLE_DISTANCE)
             {
-//                circle_flag = CIRCLE_READY_EXIT;
-                circle_flag = CIRCLE_EXIT;
-//                alarm_times(1, 50);
+                circle_flag  = CIRCLE_EXIT;
                 circle_dis_rec = get_distance();
-
-                in_circle_mending = 0;
-                circle_exit_process = 1;
-//                circle_exit_detect = 1;
+                g_img.circle_mending_active = 0; /* 取代 in_circle_mending = 0 */
+                g_img.circle_exit_active    = 1; /* 取代 circle_exit_process = 1 */
             }
-//            Circle_Exit_Judgement();
+            break;
 
-        break;
-
+        /* ── 准出阶段（保留状态，当前逻辑已跳过） ── */
         case CIRCLE_READY_EXIT:
-            if(/*(break_point[0] > 10 && break_point[0] < 35) && */(get_distance() - circle_dis_rec) > CIRCLE_READY_EXIT_DISTANCE)
+            if ((get_distance() - circle_dis_rec) > CIRCLE_READY_EXIT_DISTANCE)
             {
-                circle_flag = CIRCLE_EXIT;
-//                alarm_times(1, 50);
+                circle_flag  = CIRCLE_EXIT;
                 circle_dis_rec = get_distance();
-
-                circle_exit_detect = 0;
-                circle_exit_process = 1;
+                g_img.circle_exit_detect = 0;
+                g_img.circle_exit_active = 1;
             }
-        break;
+            break;
 
+        /* ── 出环阶段：单侧丢失数恢复后退出 ── */
         case CIRCLE_EXIT:
-            if( ((left_lose < 10)  && CIRCLE_DIR(circle_cnt) == 0)||
-                ((right_lose < 10) && CIRCLE_DIR(circle_cnt) == 1) /*|| (get_distance() - circle_dis_rec) > CIRCLE_EXIT_DISTANCE*/)
+            if ((IMG_LEFT_LOSE  < 10 && circle_dir == ROAD_DIR_LEFT) ||
+                (IMG_RIGHT_LOSE < 10 && circle_dir == ROAD_DIR_RIGHT))
             {
                 circle_flag = 0;
                 circle_cnt++;
-                clear_lock();
-
-                if(circle_cnt >= CIRCLE_NUM)
+                if (circle_cnt >= CIRCLE_NUM)
                     circle_cnt = 0;
 
-                clear_process_circle_flag();
-                circle_exit_process = 0;
+                image_circle_reset();               /* 取代 clear_process_circle_flag() */
+                g_img.circle_exit_active = 0;
+                clear_lock();
             }
-
-        break;
+            break;
 
         default:
-
-        break;
+            break;
     }
 
-    circle_modify_err = modify_err;
-    if(CIRCLE_ENTRY == circle_flag)
-    {
-//        if(LEFT_CIRCLE == CIRCLE_DIR(circle_cnt))
-//        {
-//            if(circle_modify_err > -1.0)
-//                circle_modify_err = -1.0;
-//        }
-//        else if(RIGHT_CIRCLE == CIRCLE_DIR(circle_cnt))
-//        {
-//            if(circle_modify_err < 1.0)
-//                circle_modify_err = 1.0;
-//        }
-    }
-    else if(CIRCLE_IN == circle_flag)
-    {
+    /* ── 计算转向修正量 ── */
+    circle_modify_err = g_img.modify_err; /* 取代 modify_err 全局变量 */
 
-    }
-    else if(CIRCLE_READY_EXIT == circle_flag)
+    if (circle_flag == CIRCLE_READY_EXIT)
     {
-      if(circle_dir == 0)
-            circle_modify_err = CIRCLE_EXIT_ANGLE;
-      else
-            circle_modify_err = -CIRCLE_EXIT_ANGLE;
-    }
-    else if(CIRCLE_EXIT == circle_flag)
-    {
-
+        circle_modify_err = (circle_dir == ROAD_DIR_LEFT)
+                            ?  CIRCLE_EXIT_ANGLE
+                            : -CIRCLE_EXIT_ANGLE;
     }
 
     return circle_flag;
 }
 
-/* ----------------------------------------检测入库---------------------------------------------- */
-#define STOPLINE_DIS_CTRL 25.0
-#define STOPLINE_IN_DISTANCE 1.0
+/*===========================================================================
+ * 入库（终止线）识别
+ *
+ * 图像接口变更：
+ *   barn_exist_flag  →  g_img.barn_exist
+ *=========================================================================*/
 int detect_stop(void)
 {
-    static int barn_flag = 0;
-    static float barn_dis_rec = 0;
-//    static float barn_dis = 0;
-//    static int finish_line_flag = 0;
+    static int   barn_flag    = 0;
+    static float barn_dis_rec = 0.0f;
 
+    if (get_distance() < STOPLINE_DIS_CTRL)
+        return 0;
+    if (get_lock() != _BEND && get_lock() != _BARN)
+        return 0;
 
-    if(get_distance() < ( STOPLINE_DIS_CTRL ))
-       return 0;
-
-    if(get_lock() != _BEND && get_lock() != _BARN )
-       return 0;
-
-    switch(barn_flag)
+    switch (barn_flag)
     {
-            case 0:
-                if( 1 == barn_exist_flag  ) //摄像头
-                {
-                    set_lock(_BARN);
-                    barn_flag = FINISH;
-                    barn_dis_rec = get_distance();
-//                    finish_line_flag = 1;
-                }
+        case 0:
+            if (g_img.barn_exist == 1) /* 取代 barn_exist_flag */
+            {
+                set_lock(_BARN);
+                barn_flag    = FINISH;
+                barn_dis_rec = get_distance();
+            }
             break;
-            case FINISH:
-                if((get_distance() - barn_dis_rec) > STOPLINE_IN_DISTANCE)
-                {
-                    barn_flag = FINISH_STOP;
-                }
-            break;
-            case FINISH_STOP:
-            break;
-            default:
 
+        case FINISH:
+            if ((get_distance() - barn_dis_rec) > STOPLINE_IN_DISTANCE)
+                barn_flag = FINISH_STOP;
+            break;
+
+        case FINISH_STOP:
+            break;
+
+        default:
             break;
     }
 
     return barn_flag;
 }
 
-/* ----------------------------------------检测路障---------------------------------------------- */
-#define IN_BLOCK_DISTANCE       0.7
-#define BLOCK_DIS_CTRL          1.0
+/*===========================================================================
+ * 路障识别
+ *
+ * 图像接口变更：
+ *   search_block()          →  image_search_block()
+ *   clear_process_block_flag() →  image_block_reset()
+ *=========================================================================*/
 int detect_block(void)
 {
-    static int block_flag = 0;
-    static int block_num = 1;
-    static int block_pre_flag = 0;
-    static float block_pre_flag_point = 0;
-//    static float block_dis = 0;
-//    static int block_number = 0;
+    static int   block_flag            = 0;
+    static int   block_num             = 1;
+    static int   block_pre_flag        = 0;
+    static float block_pre_flag_point  = 0.0f;
 
-    //如果等于任何其它非bend  则返回
-    if((get_lock() != _BEND && get_lock() != _BLOCK ) || get_distance() < BLOCK_DIS_CTRL/*||  motor_start_flag == 0 || block_number>=smartcar_param.road_block_number*/ )
+    if ((get_lock() != _BEND && get_lock() != _BLOCK) ||
+        get_distance() < BLOCK_DIS_CTRL)
         return 0;
-    if(block_num != 0)
+
+    if (block_num != 0)
+        block_pre_flag = image_search_block(); /* 取代 search_block() */
+
+    if (block_pre_flag)
     {
-        block_pre_flag = search_block();
-    }
-    if(block_pre_flag)
-    {
-        block_pre_flag = 0;
-        block_flag = BLOCK_IN;
+        block_pre_flag        = 0;
+        block_flag            = BLOCK_IN;
         block_num--;
-        block_pre_flag_point = get_distance();
+        block_pre_flag_point  = get_distance();
         set_lock(_BLOCK);
     }
-    if(BLOCK_IN == block_flag )
+
+    if (block_flag == BLOCK_IN)
     {
-//        printf("%.2f,%.2f,%.2f\r\n",get_distance(),block_pre_flag_point,get_distance() - block_pre_flag_point);
-        if(get_distance() - block_pre_flag_point > IN_BLOCK_DISTANCE )
+        if ((get_distance() - block_pre_flag_point) > IN_BLOCK_DISTANCE)
         {
             block_flag = 0;
-            clear_process_block_flag();
+            image_block_reset(); /* 取代 clear_process_block_flag() */
             clear_lock();
         }
     }
@@ -316,130 +317,62 @@ int detect_block(void)
     return block_flag;
 }
 
-
-/* ----------------------------------------检测长直道--------------------------------------------- */
+/*===========================================================================
+ * 长直道识别
+ *
+ * 图像接口变更：
+ *   get_last_line()   →  IMG_LAST_LINE
+ *   get_variance()    →  IMG_VAR
+ *=========================================================================*/
 int detect_long_straight_road(void)
 {
-    if(get_lock() != _BEND/* && get_lock() != _CROSS*/)
+    if (get_lock() != _BEND)
         return 0;
-//    if(left_circle_forecast_flag == 1 || right_circle_forecast_flag == 1)
-//      return 0;
-    int threshold = 16;
-    if((get_last_line() < 40 && get_variance() < threshold))
-        {
-                return LONG_STRAIGHT;
-        } else {
-                return 0;
-        }
+
+    const int threshold = 16;
+    if (IMG_LAST_LINE < 40 && IMG_VAR < threshold)
+        return LONG_STRAIGHT;
+
+    return 0;
 }
 
-/* ----------------------------------------检测十字---------------------------------------------- */
+/*===========================================================================
+ * 十字路口识别
+ *
+ * 图像接口变更：
+ *   is_cross  →  g_img.is_cross
+ *=========================================================================*/
 int detect_cross(void)
 {
-    if(get_lock() != _BEND && get_lock() != _CROSS)
-      return 0;
-//    static float trigger_position = 0;
+    if (get_lock() != _BEND && get_lock() != _CROSS)
+        return 0;
 
-//    if(cross_handle == 1 && cross_state == 0)
-//    {
-//        cross_state = 1;
-//    }
-//    else if(cross_handle == 0 && cross_state == 1)
-//        cross_state = 0;
-    if(is_cross == 1)
+    if (g_img.is_cross == 1) /* 取代 is_cross */
     {
         cross_state = CROSS;
         set_lock(_CROSS);
-    }else{
+    }
+    else
+    {
         cross_state = 0;
         clear_lock();
     }
 
     return cross_state;
 }
-#define   SW_VALUE  smartcar_param.sw_value
+
+/*===========================================================================
+ * 主路况分析入口
+ *=========================================================================*/
 void analyze_road(void)
 {
     int ret;
 
     last_road_type = road_type;
-    road_type = BEND;
+    road_type      = BEND;
 
-//    if(0 != (ret = detect_out_bound())) // 出界
-//    {
-//        road_type = ret;
-//        return;
-//    }
-
-    if(0 != (ret = detect_circle_image()))
-    {
-        road_type = ret;
-        return;
-    }
-
-    if(0 != (ret = detect_stop()))
-    {
-        road_type = ret;
-        return;
-    }
-
-    if(0 != (ret = detect_cross()))
-    {
-        road_type = ret;
-        return;
-    }
-
-//    if(0 != (ret = detect_long_straight_road()))
-//    {
-//        road_type = ret;
-//        return;
-//    }
-
-    if(0 != (ret = detect_block()))
-    {
-        road_type = ret;
-        return;
-    }
-
-//    if((uint8)SW_VALUE & 0x08) // 8(坡道)4(出发/库)2(圆环)1(入库)
-//    {
-//        if(0 != (ret = detect_ramp()))// 8(坡道)4(出发/库)2(圆环)1(入库)
-//        {
-//            road_type = ret;
-//            return;
-//        }
-//    }
-
-
-//    if((uint8)SW_VALUE & 0x04) // 8(坡道)4(出发/库)2(圆环)1(入库)
-//    {
-//        if(0 != (ret = detect_start()))
-//        {
-//            road_type = ret;
-//            return;
-//        }
-//    }
-
-
-//    if((uint8)SW_VALUE & 0x02)// 8(路碍)4(出发/库)2(圆环)1(入库)
-//    {
-//        if(0 != (ret = detect_circle_image()))
-//        {
-//            road_type = ret;
-//            return;
-//        }
-//
-//    }
-
-
-//
-//    if((uint8)SW_VALUE & 0x01)//// 8(坡道)4(出发/库)2(圆环)1(入库)
-//    {
-//        if(0 != (ret = detect_stop()))
-//        {
-//            road_type = ret;
-//            return;
-//        }
-//    }
-
+    if (0 != (ret = detect_circle_image())) { road_type = ret; return; }
+    if (0 != (ret = detect_stop()))         { road_type = ret; return; }
+    if (0 != (ret = detect_cross()))        { road_type = ret; return; }
+    if (0 != (ret = detect_block()))        { road_type = ret; return; }
 }

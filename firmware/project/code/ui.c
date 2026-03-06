@@ -390,19 +390,19 @@ static void list3_show(uint8_t update_flag)
     }
     ips200_show_char(0, 20 + ui_select * (Option1[0].height + interval), '>');
 
-    ips200_show_binary_image(0,40,(const uint8 *)binary_image,IMAGE_WIDTH,IMAGE_HEIGHT,80,60);
+    ips200_show_binary_image(0,40,(const uint8 *)g_img.binary,IMAGE_WIDTH,IMAGE_HEIGHT,80,60);
 
 //    ips200_show_gray_image(0, 40, mt9v03x_image1[0], MT9V03X_W, MT9V03X_H, MT9V03X_W, MT9V03X_H, 0);
 
     char str1[30];
-    char str2[30];
-    char str3[30];
+//    char str2[30];
+//    char str3[30];
     char str4[30];
     char str5[30];
     char str6[30];
     char str7[30];
-    char str8[30];
-    char str9[30];
+//    char str8[30];
+//    char str9[30];
 
     switch(get_road_type())
     {
@@ -467,23 +467,23 @@ static void list3_show(uint8_t update_flag)
             break;
     }
 
-    sprintf(str1,"Middle Line:%.2f     ",get_image_middle_line());
+    sprintf(str1,"Middle Line:%.2f     ",IMG_ERROR);
 //    sprintf(str8,"Left Motor PWM:%d    ",left_duty);
 //    sprintf(str9,"Right Motor PWM:%d   ",right_duty);
-    sprintf(str2,"break1:%d    ",break_point[0]);
-    sprintf(str3,"break2:%d    ",break_point[1]);
+//    sprintf(str2,"break1:%d    ",break_point[0]);
+//    sprintf(str3,"break2:%d    ",break_point[1]);
 //    sprintf(str2,"leftspwm:%.2f     ",get_curvity());
 //    sprintf(str3,"rightspwm:%d    ",rightside_duty);
-    sprintf(str8,"left lose:%d         ",left_lose);
-    sprintf(str9,"right lose:%d        ",right_lose);
+//    sprintf(str8,"left lose:%d         ",left_lose);
+//    sprintf(str9,"right lose:%d        ",right_lose);
 
     ips200_show_string(0, 180, str1);
-    ips200_show_string(0, 200, str2);
-    ips200_show_string(0, 220, str3);
+//    ips200_show_string(0, 200, str2);
+//    ips200_show_string(0, 220, str3);
     ips200_show_string(0, 240, str4);ips200_show_string(40, 240, str5);
     ips200_show_string(0, 260, str6);ips200_show_string(40, 260, str7);
-    ips200_show_string(0, 280, str8);
-    ips200_show_string(0, 300, str9);
+//    ips200_show_string(0, 280, str8);
+//    ips200_show_string(0, 300, str9);
 
 
 }

@@ -18,7 +18,7 @@
 
 /* ─────────────────────────── 任务优先级 ─────────────────────────── */
 #define PRIORITY_CONTROL        12
-#define PRIORITY_PERCEPTION     11
+#define PRIORITY_PERCEPTION     10
 #define PRIORITY_SYSTEM          3
 #define PRIORITY_UI              2
 
@@ -32,10 +32,6 @@ typedef struct
 {
     float image_error;    /* 图像横向偏差，供角度环使用 */
 } PerceptionResult_t;
-
-extern float dat[4];
-extern volatile uint8_t active_idx;
-extern volatile uint8_t ready_idx;
 
 void FreeRTOS_Start(void);
 

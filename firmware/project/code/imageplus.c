@@ -1,2473 +1,1425 @@
 #include "imageplus.h"
 
-#ifdef WHITE
-#undef WHITE
+
+/* ===== åƒç´ å¸¸é‡ ===== */
+#ifndef WHITE
+#define WHITE 0xFF
 #endif
-#define WHITE 0xff
-//#define WHITE 1
-
-#ifdef BLACK
-#undef BLACK
+#ifndef BLACK
+#define BLACK 0x00
 #endif
-#define BLACK 0
 
-//int road_width[IMAGE_HEIGHT + 1] = {
-//        80, 80, 80, 80, 21, 21, 21, 22, 22, 23,
-//
-//        23, 24, 24, 25, 25, 26, 26, 26, 27, 28,
-//
-//        28, 28, 29, 30, 30, 30, 30, 31, 32, 32,
-//
-//        32, 33, 34, 34, 34, 34, 35, 36, 36, 36,
-//
-//        37, 38, 38, 38, 39, 39, 40, 40, 41, 41,
-//
-//        42, 44, 45, 45, 45, 46, 47, 47, 47, 47,
-//};
+/* ===== å…¨å±€å•ä¾‹ ===== */
+ImageState g_img;
 
-int road_width[IMAGE_HEIGHT + 1] = {
-        0, 0, 0, 0, 14, 16, 16, 18, 18, 20,
-
-        20, 20, 22, 22, 24, 24, 24, 26, 26, 28,
-
-        28, 30, 30, 31, 32, 32, 34, 34, 35, 36,
-
-        37, 38, 38, 39, 40, 41, 42, 43, 43, 44,
-
-        45, 46, 47, 48, 49, 49, 50, 51, 52, 53,
-
-        53, 56, 57, 58, 59, 59, 60, 61, 62, 63,
-};
-#define DIMENSION 4
-
-float image_row_weight[DIMENSION][IMAGE_HEIGHT] = {
-        //½ü´¦È¨ÖØ
-        {
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//9
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//19
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//29
-                0.5, 0.5, 0.5, 0.5, 0.5, 1.0, 1.5, 2.0, 2.5, 2.8,//39
-                3.0, 3.5, 4.2, 5.0, 5.8, 6.5, 6.3, 6.0, 5.8, 5.5,//49
-                5.0, 4.8, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0 //59
-        },
-        //ÖĞ´¦È¨ÖØ
-        {
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//9
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.2, 0.3,//19
-                0.3, 0.3, 0.5, 0.5, 0.5, 0.9, 1.2, 1.8, 2.2, 2.3,//29
-                2.8, 3.0, 3.4, 4.0, 4.5, 5.0, 5.5, 6.2, 6.8, 6.5,//39
-                5.9, 5.3, 4.8, 4.5, 4.2, 4.0, 3.8, 3.5, 3.1, 2.8,//49
-                2.5, 2.1, 1.8, 1.4, 1.1, 1.0, 0.8, 0.6, 0.4, 0.2 //59
-        },
-        //Ô¶´¦È¨ÖØ
-        {
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//9
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.4, 1.4, 1.5, 1.9, 2.0,//19
-                2.5, 2.5, 2.5, 3.0, 3.5, 3.9, 4.2, 4.8, 5.8, 6.3,//29
-                6.8, 8.0, 8.5, 8.1, 8.5, 8.0, 7.5, 7.2, 6.8, 6.3,//39
-                5.9, 5.3, 4.8, 4.5, 4.2, 4.0, 3.8, 3.5, 3.1, 2.8,//49
-                2.5, 2.1, 1.8, 1.4, 1.1, 1.0, 0.8, 0.6, 0.4, 0.2 //59
-        },
-        //³¬Ô¶´¦È¨ÖØ
-        {
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,//9
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.4, 1.4, 1.5, 1.9, 2.0,//19
-                2.5, 2.5, 2.5, 4.0, 5.5, 6.9, 8.2, 8.8, 9.8, 9.3,//29
-                9.8, 9.5, 9.2, 8.8, 8.5, 8.0, 7.5, 7.0, 6.5, 5.3,//39
-                4.9, 4.3, 3.8, 3.5, 3.2, 3.0, 3.8, 3.5, 3.1, 2.8,//49
-                2.5, 2.1, 1.8, 1.4, 1.1, 1.0, 0.8, 0.6, 0.4, 0.2 //59
-        }
+/* ===== åªè¯»å‚è€ƒè¡¨ ===== */
+const int g_road_width[IMAGE_HEIGHT + 1] = {
+    0, 0, 0, 0, 14, 16, 16, 18, 18, 20,
+    20, 20, 22, 22, 24, 24, 24, 26, 26, 28,
+    28, 30, 30, 31, 32, 32, 34, 34, 35, 36,
+    37, 38, 38, 39, 40, 41, 42, 43, 43, 44,
+    45, 46, 47, 48, 49, 49, 50, 51, 52, 53,
+    53, 56, 57, 58, 59, 59, 60, 61, 62, 63,
 };
 
-
-int fps = 0;
-unsigned char binary_image[IMAGE_HEIGHT][IMAGE_WIDTH];
-int left_edge[IMAGE_HEIGHT + 1];
-int right_edge[IMAGE_HEIGHT + 1];
-int middle_line[IMAGE_HEIGHT + 1];
-int middle_line_keep[IMAGE_HEIGHT + 1];
-int jump_point_num[IMAGE_HEIGHT + 1];
-int search_start = IMAGE_WIDTH / 2;//ËÑË÷Æğµã
-int last_line = 0;//Ç°Õ°ËùÔÚĞĞ
-int longest_col = 0;//Ç°Õ°ËùÔÚÁĞ
-int available_line = 0;//¿ÉÓÃĞĞÊı
-int left_lose = 0;//×ó±ß¶ªÏßÊıÁ¿
-int right_lose = 0;//ÓÒ±ß¶ªÏßÊıÁ¿
-int all_lose = 0;//Á½±ßÍ¬Ê±¶ªÏß ÊıÁ¿
-int left_lose_start = 0;//¼ÇÂ¼×ó±ß¶ªÏßµÄ¿ªÊ¼ĞĞ
-int right_lose_start = 0;//¼ÇÂ¼ÓÒ±ß±ß¶ªÏßµÄ¿ªÊ¼ĞĞ
-int white_start = 0;//È«°×¿ªÊ¼µã
-int white_num = 0;//°×ÏßÊıÁ¿
-int break_cnt = 0;//Í»±äµã¼ÆÊı
-float curvity = 0;
-float image_error = 0;
-float modify_err = 0;
-unsigned char dynamic_thresh;
-Inflexion left_inflexion;//×ó¹Õµã
-Inflexion right_inflexion;//ÓÒ¹Õµã
-int road_width_break_point = 0;
-int road_width_break_cnt = 0;
-int right_edge_break_point = 0;
-int right_edge_break_cnt = 0;
-int left_edge_break_point = 0;
-int left_edge_break_cnt = 0;
-
-unsigned char Otsu1D(uint8_t img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], uint8 height, uint8 width)//Ò»Î¬´ó½ò·¨£¬¼ÆËãÈ«¾ÖãĞÖµ
-{
-    taskENTER_CRITICAL();
-    // ¼ì²é´«ÈëÖ¸ÕëÓĞĞ§ĞÔ =====
-    if ((uint32_t)img_2d < 0x20000000 || (uint32)img_2d > 0x2000FFFF) {
-        printf("[ERROR] Invalid img_2d pointer: 0x%08lX\r\n", (unsigned long)img_2d);
-        return 128;
-    }
-
-    float Histogram[256] = {0}; //½¨Á¢Ò»Î¬»Ò¶ÈÖ±·½Í¼,²¢³õÊ¼»¯±äÁ¿
-    uint32 N = height * width;//ÏñËØµÄ×ÜÊı
-
-    for (int i = 0; i < height; i++)//¾ØÕóµÄĞĞÊı
-    {
-        for (int j = 0; j < width; j++)//¾ØÕóµÄÁĞÊı
-        {
-            unsigned char gray_val = img_2d[i][j];//»ñÈ¡µ±Ç°»Ò¶ÈÖµ
-            Histogram[gray_val]++;//¼ÇÂ¼£¨i,j£©µÄÊıÁ¿
-        }
-    }
-
-    // ¹éÒ»»¯
-    uint32 total_pixels = 0;
-    for (int i = 0; i < 256; i++)
-    {
-        total_pixels += Histogram[i];
-        Histogram[i] /= N;//¹éÒ»»¯µÄÃ¿Ò»¸ö¶şÔª×éµÄ¸ÅÂÊ·Ö²¼
-    }
-
-
-    float avg_val = 0.0;
-
-    for (int i = 1; i < 256; i++)
-    {
-        avg_val += i * Histogram[i];
-    }
-
-
-    int threshold = 0; //ãĞÖµ
-    float max_variance = 0.0;
-    float w = 0.0, u = 0.0;
-
-    for (int i = 0; i < 256; i++)
-    {
-        w += Histogram[i];
-        u += i * Histogram[i];
-
-        // Ìø¹ı±ß½ç£¬±ÜÃâ³ıÁã
-        if (w < 1e-6f || w > 1.0f - 1e-6f)
-            continue;
-
-        float t = avg_val * w - u;
-        float variance = t * t / (w * (1 - w));
-
-        if (variance > max_variance)
-        {
-            max_variance = variance;
-            threshold = i;
-        }
-    }
-    taskEXIT_CRITICAL();
-    return threshold;
-}
-
-/*!
- *  @brief      ´ó½ò·¨¶şÖµ»¯0.8ms³ÌĞò
- *  @date:   2018-10
- *  @since      v1.2
- *  *image £ºÍ¼ÏñµØÖ·
- *  width:  Í¼Ïñ¿í
- *  height£ºÍ¼Ïñ¸ß
- *  @author     ZĞ¡Ğı
+/**
+ * è¡Œæƒé‡è¡¨ï¼ˆWEIGHT_DIM Ã— IMAGE_HEIGHTï¼‰
+ * ç»´åº¦0: è¿‘å¤„æƒé‡  ç»´åº¦1: ä¸­è·æƒé‡  ç»´åº¦2: è¿œå¤„æƒé‡  ç»´åº¦3: è¶…è¿œæƒé‡
  */
-uint8 otsuThreshold(uint8 *image, uint16 width, uint16 height)
-{
-    #define GrayScale 256
-    int pixelCount[GrayScale] = {0};//Ã¿¸ö»Ò¶ÈÖµËùÕ¼ÏñËØ¸öÊı
-    float pixelPro[GrayScale] = {0};//Ã¿¸ö»Ò¶ÈÖµËùÕ¼×ÜÏñËØ±ÈÀı
-    int i,j;
-    int Sumpix = width * height;   //×ÜÏñËØµã
-    uint8 threshold = 0;
-    uint8* data = image;  //Ö¸ÏòÏñËØÊı¾İµÄÖ¸Õë
-
-
-    //Í³¼Æ»Ò¶È¼¶ÖĞÃ¿¸öÏñËØÔÚÕû·ùÍ¼ÏñÖĞµÄ¸öÊı
-    for (i = 0; i < height; i++)
+const float g_row_weight[WEIGHT_DIM][IMAGE_HEIGHT] = {
+    /* è¿‘å¤„æƒé‡ */
     {
-        for (j = 0; j < width; j++)
-        {
-            pixelCount[(int)data[i * width + j]]++;  //½«ÏñËØÖµ×÷Îª¼ÆÊıÊı×éµÄÏÂ±ê
-          //   pixelCount[(int)image[i][j]]++;    Èô²»ÓÃÖ¸ÕëÓÃÕâ¸ö
-        }
-    }
-    float u = 0;
-    for (i = 0; i < GrayScale; i++)
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.5f,0.5f,0.5f,0.5f,0.5f,1.0f,1.5f,2.0f,2.5f,2.8f,
+        3.0f,3.5f,4.2f,5.0f,5.8f,6.5f,6.3f,6.0f,5.8f,5.5f,
+        5.0f,4.8f,4.5f,4.0f,3.5f,3.0f,2.5f,2.0f,1.5f,1.0f
+    },
+    /* ä¸­è·æƒé‡ */
     {
-        pixelPro[i] = (float)pixelCount[i] / Sumpix;   //¼ÆËãÃ¿¸öÏñËØÔÚÕû·ùÍ¼ÏñÖĞµÄ±ÈÀı
-        u += i * pixelPro[i];  //×ÜÆ½¾ù»Ò¶È
-    }
-
-
-    float maxVariance=0.0;  //×î´óÀà¼ä·½²î
-    float w0 = 0, avgValue  = 0;  //w0 Ç°¾°±ÈÀı £¬avgValue Ç°¾°Æ½¾ù»Ò¶È
-    for(int i = 0; i < 256; i++)     //Ã¿Ò»´ÎÑ­»·¶¼ÊÇÒ»´ÎÍêÕûÀà¼ä·½²î¼ÆËã (Á½¸öforµş¼ÓÎª1¸ö)
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.1f,0.2f,0.2f,0.3f,
+        0.3f,0.3f,0.5f,0.5f,0.5f,0.9f,1.2f,1.8f,2.2f,2.3f,
+        2.8f,3.0f,3.4f,4.0f,4.5f,5.0f,5.5f,6.2f,6.8f,6.5f,
+        5.9f,5.3f,4.8f,4.5f,4.2f,4.0f,3.8f,3.5f,3.1f,2.8f,
+        2.5f,2.1f,1.8f,1.4f,1.1f,1.0f,0.8f,0.6f,0.4f,0.2f
+    },
+    /* è¿œå¤„æƒé‡ */
     {
-        w0 += pixelPro[i];  //¼ÙÉèµ±Ç°»Ò¶ÈiÎªãĞÖµ, 0~i »Ò¶ÈÏñËØËùÕ¼Õû·ùÍ¼ÏñµÄ±ÈÀı¼´Ç°¾°±ÈÀı
-        avgValue  += i * pixelPro[i];
-
-        float variance = pow((avgValue/w0 - u), 2) * w0 /(1 - w0);    //Àà¼ä·½²î
-        if(variance > maxVariance)
-        {
-            maxVariance = variance;
-            threshold = i;
-        }
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.5f,0.5f,0.5f,1.0f,1.0f,1.4f,1.4f,1.5f,1.9f,2.0f,
+        2.5f,2.5f,2.5f,3.0f,3.5f,3.9f,4.2f,4.8f,5.8f,6.3f,
+        6.8f,8.0f,8.5f,8.1f,8.5f,8.0f,7.5f,7.2f,6.8f,6.3f,
+        5.9f,5.3f,4.8f,4.5f,4.2f,4.0f,3.8f,3.5f,3.1f,2.8f,
+        2.5f,2.1f,1.8f,1.4f,1.1f,1.0f,0.8f,0.6f,0.4f,0.2f
+    },
+    /* è¶…è¿œæƒé‡ */
+    {
+        0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,
+        0.5f,0.5f,0.5f,1.0f,1.0f,1.4f,1.4f,1.5f,1.9f,2.0f,
+        2.5f,2.5f,2.5f,4.0f,5.5f,6.9f,8.2f,8.8f,9.8f,9.3f,
+        9.8f,9.5f,9.2f,8.8f,8.5f,8.0f,7.5f,7.0f,6.5f,5.3f,
+        4.9f,4.3f,3.8f,3.5f,3.2f,3.0f,3.8f,3.5f,3.1f,2.8f,
+        2.5f,2.1f,1.8f,1.4f,1.1f,1.0f,0.8f,0.6f,0.4f,0.2f
     }
+};
 
-    return threshold;
+/* ===== æ¨¡å—ç§æœ‰å˜é‡ ===== */
 
-}
+/** ä¸Šä¸€å¸§åº•è¡Œæœç´¢èµ·ç‚¹ï¼ˆå¸§é—´å»¶ç»­ï¼‰ */
+static int s_search_start = IMAGE_WIDTH / 2;
+
+/** ä¸­çº¿å†å²ï¼ˆç”¨äºå…¥ç¯è¡¥çº¿ä¿ç•™ï¼‰ */
+static int s_mid_line_keep[IMAGE_HEIGHT + 1];
+
+/** è¾…åŠ©è¾¹ç•Œï¼ˆbarn/circle å†…éƒ¨é‡æ–°æ‰«æï¼Œä¸ç›´æ¥ä¿®æ”¹å…¨å±€è¾¹ç•Œï¼‰ */
+static int s_tmp_left [IMAGE_HEIGHT];
+static int s_tmp_right[IMAGE_HEIGHT];
+
+/* ===== ç§æœ‰å‡½æ•°å‰å‘å£°æ˜ ===== */
+static void        state_reset(void);
+static void        preprocess_image(BinAlgorithm algo, uint8_t img[MT9V03X_H][MT9V03X_W]);
+static void        scan_border_and_midline(void);
+static void        calc_curvity(void);
+static void        calc_variance(void);
+static void        calc_weighted_error(void);
+static void        scan_break_points(int start, int end);
+static void        process_circle(int dir);
+static void        process_block(int dir);
+static unsigned char otsu_threshold(unsigned char img[IMAGE_HEIGHT][IMAGE_WIDTH]);
+static void        sobel_auto_threshold(unsigned char img_in[IMAGE_HEIGHT][IMAGE_WIDTH],
+                                        unsigned char img_out[IMAGE_HEIGHT][IMAGE_WIDTH]);
+static void        linear_regression(int x[], int y[], int start, int end,
+                                     float *k, float *b);
+static float       edge_variance_from_regression(int edges[], int last_line);
+static void        scan_black_pixels(int row, int *left_cnt, int *right_cnt);
+
+/* æ¨¡ç³ŠåŒ–éš¶å±åº¦å‡½æ•° */
+static float fuzzify_left (float x, float x0, float x1);
+static float fuzzify_mid  (float x, float x0, float xm, float x1);
+static float fuzzify_right(float x, float x0, float x1);
+static void  get_fuzzy_weights(float speed, float w[WEIGHT_DIM]);
+
+/* ================================================================
+ * å…¬å¼€æ¥å£å®ç°
+ * ================================================================ */
 
 /**
- * @brief:   »ñÈ¡»ı·ÖÍ¼Ïñ
- *
- * @param:   *gray_img  »Ò¶ÈÍ¼ÏñÊı×éÊ×µØÖ·
- * @param:   *sum       ±£´æ»ı·ÖÍ¼ÏñÊı×éµÄÊ×µØÖ·
- * @param:   width      »Ò¶ÈÍ¼Ïñ¿í¶È
- * @param:   height     »Ò¶ÈÍ¼Ïñ¸ß¶È
- *
- * @date:    2022-12-20 created by ¼ªÆ½.¡¸¼¯¡¹
+ * @brief æ¯å¸§å›¾åƒå¤„ç†ä¸»æµç¨‹
  */
-void integral(uint8_t *gray_img, int *sum, int width, int height)
+void image_analyze(uint8_t (*img)[MT9V03X_H][MT9V03X_W])
 {
-    for (int y = 0; y < height; y++)
-    {
-        // »ñÈ¡ĞĞÖ¸Õë
-        uint8_t *input_row_ptr = &gray_img[y * width];
-        int *output_row_ptr = &sum[(y + 1) * width + 1]; // »ı·ÖÍ¼Ïñ±ÈÔ­Ê¼Í¼ÏñĞĞºÍÁĞ¶¼Òª¶à1
+    state_reset();
+    preprocess_image(BIN_ALGO_OTSU, *img);
+    scan_border_and_midline();
+    calc_curvity();
+    calc_variance();
 
-        // ¼ÆËã»ı·ÖÍ¼Ïñ
-        for (int x = 0; x < width; x++)
-        {
-            output_row_ptr[x] = 0;                                                          // ÇåÁã
-            output_row_ptr[x] = output_row_ptr[x - 1] + input_row_ptr[x];                   // 0 + s_{y,x-1} + a_{x,y}
-            output_row_ptr[x] += output_row_ptr[x - width] - output_row_ptr[x - width - 1]; // µ±Ç°ÁĞºÍ
+    int scan_end = IMG_LAST_LINE < 20 ? 20 : IMG_LAST_LINE;
+    scan_break_points(55, scan_end);
+
+    g_img.barn_exist      = image_search_barn(0, 0);
+    g_img.circle_forecast = image_search_circle();
+
+    if (g_img.circle_process_dir != ROAD_DIR_NONE)
+        process_circle(g_img.circle_process_dir);
+
+    if (g_img.block_dir != 0)
+        process_block(g_img.block_dir);
+
+    image_search_cross();
+    calc_weighted_error();
+
+    /* å•æ‘„åƒå¤´ä¿®æ­£è¯¯å·® */
+    {
+        float mid_val = 0.0f, result = 0.0f, wsum = 0.0f;
+        for (int i = IMAGE_HEIGHT - 1; i > IMG_LAST_LINE; i--) {
+            result += g_row_weight[1][i] * IMG_MID(i);
+            wsum   += g_row_weight[1][i];
         }
+        result = (wsum != 0.0f) ? (result / wsum) : MID_LINE_VAL;
+        g_img.modify_err = result - MID_LINE_VAL;
     }
+
+    image_draw_overlay();
 }
 
-/**
- * @brief:   ×ÔÊÊÓ¦ãĞÖµ¶şÖµ»¯
- *
- * @param:   *gray_img  »Ò¶ÈÍ¼ÏñÊı×éÊ×µØÖ·
- * @param:   width      »Ò¶ÈÍ¼Ïñ¿í¶È
- * @param:   height     »Ò¶ÈÍ¼Ïñ¸ß¶È
- *
- *           @note ¶şÖµ»¯»áÖ±½Ó×÷ÓÃÔÚÔ­»Ò¶ÈÍ¼ÏñÉÏ
- *
- * @date:    2022-12-20 created by ¼ªÆ½.¡¸¼¯¡¹
- */
-void adaptive_threshold_binaryzation(uint8_t *gray_img, int width, int height)
+void image_circle_activate(int dir)
 {
-    // ×ÔÊÊÓ¦ãĞÖµÈ¡n*n·¶Î§µÄÏñËØ¼ÆËã¾Ö²¿×îÓÅãĞÖµ£¬ÕâÀï¼ÆËãºÏÊÊµÄnµÄÈ¡Öµ
-    int S = (width > height ? width : height)/8;
-    // TÊÇÒ»¸ö¿Éµ÷²ÎÊı£¬Ó°ÏìãĞÖµ£¨½ø¶øÓ°Ïì¶şÖµ»¯Ğ§¹û£©
-    float T = 0.15;
-
-    // ¶¨Òå±äÁ¿±£´æn*n¿òÑ¡µÄÍ¼Ïñ·¶Î§¼°ÏñËØÊıÁ¿
-    int s2 = S/2;
-    int x1, y1, x2, y2, count;
-
-    // ÉêÇëÄÚ´æ¿Õ¼äÓÃÓÚ±£´æ»ı·ÖÍ¼Ïñ£¬»ı·ÖÍ¼Ïñ±ÈÔ­Ê¼Í¼Ïñ¶àÒ»ĞĞÒ»ÁĞ
-    int *sum = NULL;
-    sum = (int *)calloc((width + 1) * (height + 1), sizeof(int)); // ÉêÇëÄÚ´æ¿Õ¼ä£¬²¢¶ÔÉêÇëµ½µÄ¿Õ¼ä×öÁã³õÊ¼»¯
-
-    // È·ÈÏÊÇ·ñÉêÇëµ½ÁËÄÚ´æ¿Õ¼ä
-    if(sum != NULL)
-    {
-        integral(gray_img, sum, width, height); // ¼ÆËãºÍ»ñÈ¡»ı·ÖÍ¼Ïñ
-
-        // Íâ²ãÑ­»·ÓÃÓÚ±éÀúÍ¼ÏñµÄÃ¿Ò»ĞĞ
-        for (int y = 0; y < height; y++)
-        {
-            // ¼ÆËãyÖáÉÏµÄ¿òÑ¡·¶Î§
-            y1 = y - s2;
-            y2 = y + s2;
-
-            // ±ÜÃâ¿òÑ¡µ½Í¼ÏñÍâµÄÏñËØµã
-            y1 = y1 < 0 ? 0 : y1;
-            y2 = y2 > (height - 1) ? (height - 1) : y2;
-
-            // »ñÈ¡»Ò¶ÈÍ¼ÏñºÍ»ı·ÖÍ¼ÏñµÄĞĞÖ¸Õë£¨¿ÉÒÔÀí½âÎªµ¥ĞĞÍ¼ÏñµÄÊ×¸öÏñËØµÄµØÖ·£©
-            uint8_t *row_ptr = &gray_img[y * width];
-            int *y1_ptr = &sum[y1 * width];
-            int *y2_ptr = &sum[y2 * width];
-
-            // ÄÚ²ãÑ­»·ÓÃÓÚ±éÀúÍ¼ÏñµÄÃ¿Ò»ÁĞ
-            for (int x = 0; x < width; x++)
-            {
-                // ¼ÆËãxÖáÉÏµÄ¿òÑ¡·¶Î§
-                x1 = x - s2;
-                x2 = x + s2;
-
-                // ±ÜÃâ¿òÑ¡µ½Í¼ÏñÍâµÄÏñËØµã
-                x1 = x1 < 0 ? 0 : x1;
-                x2 = x2 > (width - 1) ? (width - 1) : x2;
-
-                // ¼ÆËã¿òÑ¡µÄÏñËØµãµÄ¸öÊı
-                count = (x2 - x1) * (y2 - y1);
-
-                // ¼ÆËã¾Ö²¿ãĞÖµ
-                int summation = y2_ptr[x2] + y1_ptr[x1] - y1_ptr[x2] - y2_ptr[x1]; // ÀûÓÃ»ı·ÖÍ¼¿ìËÙÇóÇøÓòºÍ
-                uint8_t threshold = summation / count;
-
-                // ¶şÖµ»¯
-                row_ptr[x] = ((int)(row_ptr[x] * count) > (int)(summation * (1.f - T))) ? 255 : 0;
-            }
-        }
-
-        free(sum); // ÊÍ·ÅÉêÇëµÄÄÚ´æ¿Õ¼ä
-        sum = NULL;
-    }
-    else
-    {
-        // do nothing
-    }
+    g_img.circle_process_dir  = dir;
+    g_img.circle_proc_complete = 0;
 }
 
-/*!
- * @brief    »ùÓÚsoble±ßÑØ¼ì²âËã×ÓµÄÒ»ÖÖ×Ô¶¯ãĞÖµ±ßÑØ¼ì²â
- * @param    imageIn    ÊäÈëÊı×é
- *           imageOut   Êä³öÊı×é      ±£´æµÄ¶şÖµ»¯ºóµÄ±ßÑØĞÅÏ¢
- * @return
- * @note
- * @example
- * @date     2020/5/15
- */
-void lq_sobelAutoThreshold(unsigned char imageIn[IMAGE_HEIGHT][IMAGE_WIDTH],
-                           unsigned char imageOut[IMAGE_HEIGHT][IMAGE_WIDTH])
+void image_circle_reset(void)
 {
-    /** ¾í»ıºË´óĞ¡ */
-    short KERNEL_SIZE = 3;
-    short xStart = KERNEL_SIZE / 2;
-    short xEnd = IMAGE_WIDTH - KERNEL_SIZE / 2;
-    short yStart = KERNEL_SIZE / 2;
-    short yEnd = IMAGE_HEIGHT - KERNEL_SIZE / 2;
-    short i, j, k;
-    short temp[4];
-    for (i = yStart; i < yEnd; i++)
-    {
-        for (j = xStart; j < xEnd; j++)
-        {
-            /* ¼ÆËã²»Í¬·½ÏòÌİ¶È·ùÖµ  */
-            temp[0] = -(short) imageIn[i - 1][j - 1] + (short) imageIn[i - 1][j + 1]     //{{-1, 0, 1},
-                      - (short) imageIn[i][j - 1] + (short) imageIn[i][j + 1]                      // {-1, 0, 1},
-                      - (short) imageIn[i + 1][j - 1] + (short) imageIn[i + 1][j + 1];             // {-1, 0, 1}};
-
-            temp[1] = -(short) imageIn[i - 1][j - 1] + (short) imageIn[i + 1][j - 1]     //{{-1, -1, -1},
-                      - (short) imageIn[i - 1][j] + (short) imageIn[i + 1][j]                      // { 0,  0,  0},
-                      - (short) imageIn[i - 1][j + 1] + (short) imageIn[i + 1][j + 1];             // { 1,  1,  1}};
-
-            temp[2] = -(short) imageIn[i - 1][j] + (short) imageIn[i][j - 1]             //  0, -1, -1
-                      - (short) imageIn[i][j + 1] + (short) imageIn[i + 1][j]                      //  1,  0, -1
-                      - (short) imageIn[i - 1][j + 1] + (short) imageIn[i + 1][j - 1];             //  1,  1,  0
-
-            temp[3] = -(short) imageIn[i - 1][j] + (short) imageIn[i][j + 1]             // -1, -1,  0
-                      - (short) imageIn[i][j - 1] + (short) imageIn[i + 1][j]                      // -1,  0,  1
-                      - (short) imageIn[i - 1][j - 1] + (short) imageIn[i + 1][j + 1];             //  0,  1,  1
-
-            temp[0] = abs(temp[0]);
-            temp[1] = abs(temp[1]);
-            temp[2] = abs(temp[2]);
-            temp[3] = abs(temp[3]);
-
-            /* ÕÒ³öÌİ¶È·ùÖµ×î´óÖµ  */
-            for (k = 1; k < 4; k++)
-            {
-                if (temp[0] < temp[k])
-                {
-                    temp[0] = temp[k];
-                }
-            }
-
-            /* Ê¹ÓÃÏñËØµãÁÚÓòÄÚÏñËØµãÖ®ºÍµÄÒ»¶¨±ÈÀı    ×÷ÎªãĞÖµ  */
-            temp[3] = (short) imageIn[i - 1][j - 1] + (short) imageIn[i - 1][j] + (short) imageIn[i - 1][j + 1]
-                      + (short) imageIn[i][j - 1] + (short) imageIn[i][j] + (short) imageIn[i][j + 1]
-                      + (short) imageIn[i + 1][j - 1] + (short) imageIn[i + 1][j] + (short) imageIn[i + 1][j + 1];
-
-            if (temp[0] > temp[3] / 12.0f)
-            {
-                imageOut[i][j] = BLACK;
-            }
-            else
-            {
-                imageOut[i][j] = WHITE;
-            }
-        }
-    }
+    g_img.circle_process_dir = ROAD_DIR_NONE;
 }
 
-void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
+void image_block_reset(void)
 {
+    g_img.block_dir = 0;
+}
 
+/* ================================================================
+ * äºŒå€¼åŒ–
+ * ================================================================ */
+
+static void preprocess_image(BinAlgorithm algo, uint8_t img[MT9V03X_H][MT9V03X_W])
+{
+    unsigned char buf[IMAGE_HEIGHT][IMAGE_WIDTH];
     int m = 0, n = 0;
-    static uint8_t image_use[IMAGE_HEIGHT][IMAGE_WIDTH];
-    //Ñ¹ËõÍ¼Ïñ
-    for (int i = 0; i < MT9V03X_H; i += ROW_RAR)
-    {
+
+    /* æŒ‰å‹ç¼©æ¯”é‡‡æ ·åŸå§‹å›¾åƒ */
+    for (int i = 0; i < MT9V03X_H; i += ROW_RAR) {
         n = 0;
         for (int j = 0; j < MT9V03X_W; j += COL_RAR)
-        {
-            image_use[m][n] = img[i][j];
-            n++;
-        }
+            buf[m][n++] = img[i][j];
         m++;
     }
 
-    if (mode == OSTU)
-    {
-        dynamic_thresh = Otsu1D(image_use, IMAGE_HEIGHT, IMAGE_WIDTH);
-//        dynamic_thresh = otsuThreshold(image_use[0], IMAGE_HEIGHT, IMAGE_WIDTH);
-//        adaptive_threshold_binaryzation(image_use[0], IMAGE_HEIGHT, IMAGE_WIDTH);
-    }
-    else if (mode == SobelAutoThreshold)
-    {
-        lq_sobelAutoThreshold(image_use, binary_image);  //¶¯Ì¬µ÷½ÚãĞÖµ
+    if (algo == BIN_ALGO_SOBEL_AUTO) {
+        sobel_auto_threshold(buf, g_img.binary);
         return;
     }
+
+    /* OTSU å…¨å±€é˜ˆå€¼ */
+    g_img.dyn_thresh = otsu_threshold(buf);
 
     for (int i = 0; i < IMAGE_HEIGHT; i++)
-    {
         for (int j = 0; j < IMAGE_WIDTH; j++)
-        {
-            if (image_use[i][j] > get_dynamic_thresh())
-            {
-                binary_image[i][j] = WHITE;
-            }
-            else
-            {
-                binary_image[i][j] = BLACK;
-            }
-        }
-    }
+            g_img.binary[i][j] = (buf[i][j] > g_img.dyn_thresh) ? WHITE : BLACK;
 
-    if (get_road_type() == CIRCLE_IN)
-    {
-        //È¥³ıÉÏĞĞ¶àÓàÍ¼Ïñ
+    /* å…¥ç¯æ—¶å±è”½é¡¶éƒ¨å¹²æ‰°åŒºåŸŸ */
+    if (get_road_type() == CIRCLE_IN) {
         for (int i = 0; i < SHIELD_LINE; i++)
-        {
-            for (int j = 0; j < IMAGE_WIDTH; j++)
-            {
-                binary_image[i][j] = BLACK;
-            }
-        }
+            memset(g_img.binary[i], BLACK, IMAGE_WIDTH);
     }
-
-
 }
 
-void search_border_line_and_Mid_line(void)
+/* ================================================================
+ * å¤§æ´¥æ³•é˜ˆå€¼
+ * ================================================================ */
+static unsigned char otsu_threshold(unsigned char img[IMAGE_HEIGHT][IMAGE_WIDTH])
 {
-    //printf("image_analyze start\n\r");
-//    int break_flag = 0;
-//    int break_point[2] = {0, 59};
-    for (int i = IMAGE_HEIGHT - 1; i > IMAGE_HEIGHT - 10; i--)
-    {
-        int j = 0;
-        //search left border
-        if (i == IMAGE_HEIGHT - 1)//Ê×ĞĞ¾ÍÒÔÍ¼ÏñÖĞĞÄ×÷ÎªÉ¨ÃèÆğµã
-        {
-            j = search_start;//IMAGE_WIDTH / 2
-        }
-        else
-        {
-            j = middle_line[i + 1];//·ñÔò¾ÍÒÔÉÏÒ»ĞĞÖĞµãµÄÎ»ÖÃ×÷Îª±¾ĞĞÉ¨ÃèÆğµã
-        }
-        if (j <= 1)
-        {
-            j = 1;
-        }
-        if (j >= IMAGE_WIDTH - 2)
-        {
-            j = IMAGE_WIDTH - 2;
-        }
-        while (j >= 1)
-        {
-            if (binary_image[i][j - 1] == BLACK && binary_image[i][j] == WHITE && binary_image[i][j + 1] == WHITE)
-            {
-                left_edge[i] = j - 1;
-                break;
-            }
-            j--;
-        }
+    /* â”€â”€ 1. å»ºæ•´æ•°ç›´æ–¹å›¾ â”€â”€ */
+    uint16_t hist[256];
+    memset(hist, 0, sizeof(hist));
 
-        //search right border
-        if (i == IMAGE_HEIGHT - 1) //ÔÙÕÒÓÒ±ß½ç
-        {
-            j = search_start;//Èç¹ûÊ×ĞĞ£¬´ÓÍ¼ÏñÖĞĞÄ¿ªÊ¼ËÑÑ°
-        }
-        else
-        {
-            j = middle_line[i + 1];//·ñÔò´ÓÉÏÒ»ĞĞÖĞĞÄÎ»ÖÃ¿ªÊ¼ËÑÑ°
-        }
-        if (j >= IMAGE_WIDTH - 2)//j >= IMAGE_WIDTH - 3ÓĞĞ§·¶Î§ÄÚËÑÑ°ÓÒÏß
-        {
-            j = IMAGE_WIDTH - 2;
-        }
-        if (j <= 1)
-        {
-            j = 1;
-        }
-        while (j <= IMAGE_WIDTH - 2)
-        {
-            if (binary_image[i][j - 1] == WHITE && binary_image[i][j] == WHITE && binary_image[i][j + 1] == BLACK)
-            {
-                right_edge[i] = j + 1;
-                break;
-            }
-            j++;
-        }
+    for (int i = 0; i < IMAGE_HEIGHT; i++)
+        for (int j = 0; j < IMAGE_WIDTH; j++)
+            hist[img[i][j]]++;          /* æœ€å¤§å€¼ 4800ï¼Œuint16 è¶³å¤Ÿ */
 
+    /* â”€â”€ 2. å…¨å±€ç°åº¦åŠ æƒæ€»å’Œ â”€â”€ */
+    const int32_t N = IMAGE_HEIGHT * IMAGE_WIDTH; /* 4800ï¼Œç¼–è¯‘æœŸå¸¸é‡ */
+    int32_t sum_total = 0;
+    for (int i = 0; i < 256; i++)
+        sum_total += (int32_t)i * hist[i]; /* max 1,224,000 â†’ int32 âœ“ */
 
-        //calculate middle line
-        if (left_edge[i] != 0 && right_edge[i] != IMAGE_WIDTH)//ÖĞÏßÅĞ¶Ï£¬Ã»ÓĞ¶ªÏß
-        {
-            middle_line[i] = (left_edge[i] + right_edge[i]) / 2;
+    /* â”€â”€ 3. éå†é˜ˆå€¼ï¼Œæœ€å¤§åŒ–ç±»é—´æ–¹å·® â”€â”€ */
+    int32_t count0 = 0;
+    int32_t sum0   = 0;
+    int64_t best   = 0;
+    int     thresh = 0;
+
+    for (int i = 0; i < 256; i++) {
+        count0 += hist[i];
+        sum0   += (int32_t)i * hist[i];
+
+        int32_t count1 = N - count0;
+        if (count0 == 0 || count1 == 0) continue; /* è·³è¿‡è¾¹ç•Œæ— æ•ˆæ®µ */
+
+        /*
+         * t = sum0 * N - sum_total * count0
+                  * æœ€å¤§çº¦ 5.87e9ï¼Œç”¨ int64 æ‰¿æ¥ï¼Œå†å³ç§» 2 ä½å‹å…¥ int32
+                  * ä»¥ä¾¿å¹³æ–¹åä»åœ¨ int64 èŒƒå›´å†…
+         */
+        int32_t ts = (int32_t)(
+            ((int64_t)sum0 * N - (int64_t)sum_total * count0) >> 2
+        );
+
+        /* val = tsÂ² / (count0 Ã— count1)ï¼Œå…¨ç¨‹ int64ï¼Œæ— æµ®ç‚¹ */
+        int64_t val = (int64_t)ts * ts / ((int64_t)count0 * count1);
+
+        if (val > best) {
+            best   = val;
+            thresh = i;
         }
-        else if (left_edge[i] == 0 && right_edge[i] != IMAGE_WIDTH)//¶ªÁË×óÏß
-        {
-            left_lose++;//¼ÇÂ¼Ö»ÓĞ×óÏß¶ªµÄÊıÁ¿
-            if (left_lose_start == 0)
-                left_lose_start = i;
-            if ((right_edge[i] - left_edge[i]) >= (right_edge[i + 1] - left_edge[i + 1] + 1))//Í»±ä
-            {
-                middle_line[i] = middle_line[i + 1];//ÓÃÉÏÒ»ĞĞµÄÖĞµã
-            }
-            else
-            {
-                middle_line[i] = right_edge[i] - road_width[i] / 2;//Õı³£µÄ»°¾ÍÓÃ°ë¿í²¹
-            }
-        }
-        else if (left_edge[i] != 0 && right_edge[i] == IMAGE_WIDTH)//¶ªÁËÓÒÏß
-        {
-            right_lose++;//¼ÇÂ¼Ö»ÓĞÓÒÏß¶ªµÄÊıÁ¿
-            if (right_lose_start == 0)
-                right_lose_start = i;
-            if ((right_edge[i] - left_edge[i]) >= (right_edge[i + 1] - left_edge[i + 1] + 1))//Í»±ä
-            {
-                middle_line[i] = middle_line[i + 1];//ÓÃÉÏÒ»ĞĞµÄÖĞµã
-            }
-            else
-            {
-                middle_line[i] = left_edge[i] + road_width[i] / 2;//Õı³£µÄ»°¾ÍÓÃ°ë¿í²¹
-            }
-        }
-        else if (left_edge[i] == 0 && right_edge[i] == IMAGE_WIDTH)//Á½±ß¶¼¶ªÁËµÄ»°
-        {
-            all_lose++;
-            if (i == IMAGE_HEIGHT - 1)//Èç¹ûÊÇÊ×ĞĞ¾ÍÒÔÍ¼ÏñÖĞĞÄ×÷ÎªÖĞµã
-            {
-                middle_line[i] = IMAGE_WIDTH / 2;
-            }
-            else
-            {
-                middle_line[i] = middle_line[i + 1];//Èç¹û²»ÊÇÊ×ĞĞ¾ÍÓÃÉÏÒ»ĞĞµÄÖĞÏß×÷Îª±¾ĞĞÖĞµã
-            }
-        }
-        if (middle_line[IMAGE_HEIGHT - 1] >= IMAGE_WIDTH - 12)
-        {
-            search_start = IMAGE_WIDTH - 12;
-        }
-        else if (middle_line[IMAGE_HEIGHT - 1] <= 12)
-        {
-            search_start = 12;
-        }
-        else
-        {
-            search_start = middle_line[IMAGE_HEIGHT - 1];//¼ÇÂ¼±¾Ö¡Í¼ÏñµÚ59ĞĞµÄÖĞÏßÖµ£¬×÷ÎªÏÂÒ»·ùÍ¼ÏñµÄ59ĞĞÉ¨ÃèÆğÊ¼µã
-        }
-        //printf("%d %d %d\n\r", left_edge[i], right_edge[i], middle_line[i]);
     }
-    //printf("image_analyze\n\r");
-    for (int i = IMAGE_HEIGHT - 10; i > 2; i--)
-    {
-        if (left_edge[i + 1] != 0 && right_edge[i + 1] != IMAGE_WIDTH) //ÉÏÒ»ĞĞÁ½±ß¶¼ÕÒµ½ ÆôÓÃ±ßÑØÉ¨Ãè
-        {
-            int j = ((left_edge[i + 1] + 3) >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : (left_edge[i + 1] +
-                                                                                     3);//int j = ((left_edge[i + 1] + 10) >= IMAGE_WIDTH - 6) ? IMAGE_WIDTH - 6 : (left_edge[i + 1] + 10);//ÏÈÕÒ×ó±ß½ç
-            int jj = ((left_edge[i + 1] - 5) <= 1) ? 1 : (left_edge[i + 1] - 5);
-            while (j >= jj)
-            {
-                if (binary_image[i][j - 1] == BLACK && binary_image[i][j] == WHITE)//ÕÒºÚ°×Ìø±ä
-                {
-                    left_edge[i] = j;
-                    break;
-                }
-                j--;
-            }
-            j = ((right_edge[i + 1] - 3) <= 1) ? 1 : (right_edge[i + 1] -
-                                                      3);//j = ((right_edge[i + 1] - 10) <= 5) ? 5 : (right_edge[i + 1] - 10);//ÔÙÕÒÓÒ±ß½ç
-            jj = ((right_edge[i + 1] + 5) >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : (right_edge[i + 1] + 5);
-            while (j <= jj)
-            {
-                if (binary_image[i][j] == WHITE && binary_image[i][j + 1] == BLACK)//ÕÒ°×ºÚÌø±ä
-                {
-                    right_edge[i] = j;
-                    break;
-                }
-                j++;
-            }
-        }
-        else if (left_edge[i + 1] != 0 && right_edge[i + 1] == IMAGE_WIDTH)//ÉÏÒ»ĞĞÖ»ÕÒµ½×ó±ß½ç
-        {
-            int j = ((left_edge[i + 1] + 10) >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : (left_edge[i + 1] + 10);//×ó±ß½çÓÃ±ßÑØÉ¨Ãè
-            int jj = ((left_edge[i + 1] - 5) <= 1) ? 1 : (left_edge[i + 1] - 5);
-            while (j >= jj)
-            {
-                if (binary_image[i][j - 1] == BLACK && binary_image[i][j] == WHITE)//ÕÒºÚ°×
-                {
-                    left_edge[i] = j;
-                    break;
-                }
-                j--;
-            }
-            j = middle_line[i + 1];//ÉÏÒ»ĞĞ¶ªÁËÓÒ±ß½çÓÃÈ«ĞĞÉ¨Ãè
-            if (j >= IMAGE_WIDTH - 2)
-            {
-                j = IMAGE_WIDTH - 2;
-            }
-            while (j <= IMAGE_WIDTH - 2)
-            {
-                if (binary_image[i][j] == WHITE && binary_image[i][j + 1] == BLACK)
-                {
-                    right_edge[i] = j;
-                    break;
-                }
-                j++;
-            }
-        }
-        else if (left_edge[i + 1] == 0 && right_edge[i + 1] != IMAGE_WIDTH)//ÉÏÒ»ĞĞÖ»ÕÒµ½ÓÒ±ß½ç
-        {
-            int j = ((right_edge[i + 1] - 10) <= 1) ? 1 : (right_edge[i + 1] - 10);//±ßÔµ×·×ÙÕÒÓÒ±ß½ç
-            int jj = ((right_edge[i + 1] + 5) >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : (right_edge[i + 1] + 5);
-            while (j <= jj)
-            {
-                if (binary_image[i][j] == WHITE && binary_image[i][j + 1] == BLACK)//ÕÒ°×ºÚ
-                {
-                    right_edge[i] = j;
-                    break;
-                }
-                j++;
-            }
-            j = middle_line[i + 1];//È«ĞĞÉ¨ÃèÕÒ×ó±ß½ç
-            if (j <= 1)
-            {
-                j = 1;
-            }
-            while (j >= 1)
-            {
-                if (binary_image[i][j - 1] == BLACK && binary_image[i][j] == WHITE)
-                {
-                    left_edge[i] = j;
-                    break;
-                }
-                j--;
-            }
-        }
-        else if (left_edge[i + 1] == 0 && right_edge[i + 1] == IMAGE_WIDTH)//ÉÏÒ»ĞĞÃ»ÕÒµ½±ß½ç£¬¿ÉÄÜÊÇÊ®×Ö»òÕß»·ĞÎ
-        {
-            int j = middle_line[i + 1];//È«ĞĞÕÒ×ó±ß½ç
-            while (j >= 1)
-            {
-                if (binary_image[i][j - 1] == BLACK && binary_image[i][j] == WHITE)
-                {
-                    left_edge[i] = j;
-                    break;
-                }
-                j--;
-            }
-            j = middle_line[i + 1];//È«ĞĞÕÒÓÒ±ß½ç
-            while (j <= IMAGE_WIDTH - 2)
-            {
-                if (binary_image[i][j] == WHITE && binary_image[i][j + 1] == BLACK)
-                {
-                    right_edge[i] = j;
-                    break;
-                }
-                j++;
-            }
-        }
-        if ((right_edge[i] - left_edge[i]) >= (right_edge[i + 1] - left_edge[i + 1] + 1))//²»Âú×ã»û±ä
-        {
-            middle_line[i] = middle_line[i + 1];//ÓÃÉÏÒ»ĞĞ
-        }
-        else
-        {
 
-            if (left_edge[i] != 0 && right_edge[i] != IMAGE_WIDTH)
-            {
-                middle_line[i] = (left_edge[i] + right_edge[i]) / 2;
+    return (unsigned char)thresh;
+
+//    float hist[256] = {0};
+//    unsigned int N = IMAGE_HEIGHT * IMAGE_WIDTH;
+//    for (int i = 0; i < IMAGE_HEIGHT; i++)
+//        for (int j = 0; j < IMAGE_WIDTH; j++)
+//            hist[img[i][j]]++;
+//
+//    for (int i = 0; i < 256; i++)
+//        hist[i] /= N;
+//    float avg = 0.0f;
+//    for (int i = 1; i < 256; i++)
+//        avg += i * hist[i];
+//    int   threshold    = 0;
+//    float max_variance = 0.0f;
+//    float w = 0.0f, u = 0.0f;
+//    for (int i = 0; i < 256; i++) {
+//        w += hist[i];
+//        u += i * hist[i];
+//        float t  = avg * w - u;
+//        float dw = w * (1.0f - w);
+//        if (dw < 1e-6f) continue;
+//        float var = t * t / dw;
+//        if (var > max_variance) {
+//            max_variance = var;
+//            threshold    = i;
+//        }
+//    }
+//    return (unsigned char)threshold;
+}
+
+/* ================================================================
+ * Sobel è‡ªé€‚åº”é˜ˆå€¼äºŒå€¼åŒ–
+ * ================================================================ */
+static void sobel_auto_threshold(unsigned char in[IMAGE_HEIGHT][IMAGE_WIDTH],
+                                 unsigned char out[IMAGE_HEIGHT][IMAGE_WIDTH])
+{
+    for (int i = 1; i < IMAGE_HEIGHT - 1; i++) {
+        for (int j = 1; j < IMAGE_WIDTH - 1; j++) {
+            short g[4];
+            /* 4æ–¹å‘ Sobel */
+            g[0] = -(short)in[i-1][j-1]+(short)in[i-1][j+1]
+                   -(short)in[i  ][j-1]+(short)in[i  ][j+1]
+                   -(short)in[i+1][j-1]+(short)in[i+1][j+1];
+            g[1] = -(short)in[i-1][j-1]+(short)in[i+1][j-1]
+                   -(short)in[i-1][j  ]+(short)in[i+1][j  ]
+                   -(short)in[i-1][j+1]+(short)in[i+1][j+1];
+            g[2] = -(short)in[i-1][j  ]+(short)in[i  ][j-1]
+                   -(short)in[i  ][j+1]+(short)in[i+1][j  ]
+                   -(short)in[i-1][j+1]+(short)in[i+1][j-1];
+            g[3] = -(short)in[i-1][j  ]+(short)in[i  ][j+1]
+                   -(short)in[i  ][j-1]+(short)in[i+1][j  ]
+                   -(short)in[i-1][j-1]+(short)in[i+1][j+1];
+
+            short gmax = 0;
+            for (int k = 0; k < 4; k++) {
+                short a = g[k] < 0 ? -g[k] : g[k];
+                if (a > gmax) gmax = a;
             }
-            else if (left_edge[i] != 0 && right_edge[i] == IMAGE_WIDTH)//Ö»ÕÒµ½×ó
-            {
-                right_lose++;
-                if (right_lose_start == 0)
-                    right_lose_start = i;
-                if (left_edge[i + 1] != 0)//ÉÏÒ»ĞĞÕÒµ½ÁË£¬ÓÃÆ«ÒÆÁ¿
-                {
-                    middle_line[i] = middle_line[i + 1] + (left_edge[i] - left_edge[i + 1]);
-                }
-                else//·ñÔò¾ÍÓÃÈüµÀ¿í¶ÈÒ»°ë²¹
-                {
-                    middle_line[i] = left_edge[i] + road_width[i] / 2;
-                }
-            }
-            else if (left_edge[i] == 0 && right_edge[i] != IMAGE_WIDTH)//Ö»ÕÒµ½ÓÒ
-            {
-                left_lose++;
-                if (left_lose_start == 0)
-                    left_lose_start = i;
-                if (right_edge[i + 1] != IMAGE_WIDTH)//ÉÏÒ»ĞĞÕÒµ½ÁË£¬ÓÃÆ«ÒÆÁ¿
-                {
-                    middle_line[i] = middle_line[i + 1] + (right_edge[i] - right_edge[i + 1]);
-                }
-                else//·ñÔò¾ÍÓÃÈüµÀ¿í¶ÈÒ»°ë²¹
-                {
-                    middle_line[i] = right_edge[i] - road_width[i] / 2;
-                }
-            }
-            else if (left_edge[i] == 0 && right_edge[i] == IMAGE_WIDTH)//Á½±ß¶ªÏß
-            {
-                white_num++;
-                all_lose++;
-                if (white_num == 1)
-                {
-                    white_start = i;
-                }
-                middle_line[i] = middle_line[i + 1];//ÓÃÉÏÒ»ĞĞµÄ
+
+            /* é‚»åŸŸåƒç´ å’Œä½œä¸ºè‡ªé€‚åº”åˆ†æ¯ */
+            short sum =
+                (short)in[i-1][j-1]+(short)in[i-1][j]+(short)in[i-1][j+1]+
+                (short)in[i  ][j-1]+(short)in[i  ][j]+(short)in[i  ][j+1]+
+                (short)in[i+1][j-1]+(short)in[i+1][j]+(short)in[i+1][j+1];
+
+            out[i][j] = (gmax > sum / 12.0f) ? BLACK : WHITE;
+        }
+    }
+}
+
+/* ================================================================
+ * è¾¹ç•Œæ‰«æ & ä¸­çº¿è®¡ç®—
+ * ================================================================ */
+static void scan_border_and_midline(void)
+{
+    LaneLines  *L = &g_img.lanes;
+    EdgeLoss   *E = &g_img.loss;
+
+    /* â”€â”€ ç¬¬ä¸€é˜¶æ®µï¼šåº•éƒ¨10è¡Œï¼Œä»¥å›¾åƒä¸­å¿ƒä¸ºèµ·ç‚¹å…¨è¡Œæ‰«æ â”€â”€ */
+    for (int i = IMAGE_HEIGHT - 1; i > IMAGE_HEIGHT - 10; i--) {
+        int j_start = (i == IMAGE_HEIGHT - 1) ? s_search_start : L->mid_line[i + 1];
+        j_start = (j_start < 1) ? 1 : (j_start > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : j_start);
+
+        /* æœç´¢å·¦è¾¹ç•Œ */
+        L->left_edge[i] = 0;
+        for (int j = j_start; j >= 1; j--) {
+            if (g_img.binary[i][j-1] == BLACK && g_img.binary[i][j] == WHITE) {
+                L->left_edge[i] = j - 1;
+                break;
             }
         }
-        if (i <= 4)
-        {
-            set_last_line(i);
-            set_available_line(IMAGE_HEIGHT - 1 - i);
+
+        /* æœç´¢å³è¾¹ç•Œ */
+        L->right_edge[i] = IMAGE_WIDTH;
+        j_start = (i == IMAGE_HEIGHT - 1) ? s_search_start : L->mid_line[i + 1];
+        j_start = (j_start < 1) ? 1 : (j_start > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : j_start);
+        for (int j = j_start; j <= IMAGE_WIDTH - 2; j++) {
+            if (g_img.binary[i][j] == WHITE && g_img.binary[i][j+1] == BLACK) {
+                L->right_edge[i] = j + 1;
+                break;
+            }
+        }
+
+        /* è®¡ç®—ä¸­çº¿ */
+        int lf = L->left_edge[i], rf = L->right_edge[i];
+        int lp = L->left_edge[i+1], rp = L->right_edge[i+1];
+
+        if (lf != 0 && rf != IMAGE_WIDTH) {
+            L->mid_line[i] = (lf + rf) / 2;
+        } else if (lf == 0 && rf != IMAGE_WIDTH) {
+            E->left_cnt++;
+            if (E->left_start_row == 0) E->left_start_row = i;
+            L->mid_line[i] = ((rf - lf) >= (rp - lp + 1))
+                             ? L->mid_line[i+1]
+                             : (rf - g_road_width[i] / 2);
+        } else if (lf != 0 && rf == IMAGE_WIDTH) {
+            E->right_cnt++;
+            if (E->right_start_row == 0) E->right_start_row = i;
+            L->mid_line[i] = ((rf - lf) >= (rp - lp + 1))
+                             ? L->mid_line[i+1]
+                             : (lf + g_road_width[i] / 2);
+        } else {
+            E->both_cnt++;
+            L->mid_line[i] = (i == IMAGE_HEIGHT - 1) ? IMAGE_WIDTH / 2 : L->mid_line[i+1];
+        }
+
+        /* æ›´æ–°ä¸‹ä¸€å¸§åº•è¡Œæœç´¢èµ·ç‚¹ */
+        if (i == IMAGE_HEIGHT - 1) {
+            int m = L->mid_line[i];
+            s_search_start = (m <= 12) ? 12 : (m >= IMAGE_WIDTH - 12 ? IMAGE_WIDTH - 12 : m);
+        }
+    }
+
+    /* â”€â”€ ç¬¬äºŒé˜¶æ®µï¼šä»ç¬¬10è¡Œå‘ä¸Šè¾¹ç¼˜è¿½è¸ª â”€â”€ */
+    for (int i = IMAGE_HEIGHT - 10; i > 2; i--) {
+        int lp = L->left_edge[i+1], rp = L->right_edge[i+1];
+        int j, jj;
+
+        if (lp != 0 && rp != IMAGE_WIDTH) {
+            /* ä¸Šè¡Œä¸¤ä¾§å‡æœ‰æ•ˆï¼šçª„çª—å£è¿½è¸ª */
+            j  = (lp + 3 >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : lp + 3;
+            jj = (lp - 5 <= 1)              ? 1               : lp - 5;
+            L->left_edge[i] = 0;
+            for (; j >= jj; j--) {
+                if (g_img.binary[i][j-1] == BLACK && g_img.binary[i][j] == WHITE) {
+                    L->left_edge[i] = j; break;
+                }
+            }
+            j  = (rp - 3 <= 1)              ? 1               : rp - 3;
+            jj = (rp + 5 >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : rp + 5;
+            L->right_edge[i] = IMAGE_WIDTH;
+            for (; j <= jj; j++) {
+                if (g_img.binary[i][j] == WHITE && g_img.binary[i][j+1] == BLACK) {
+                    L->right_edge[i] = j; break;
+                }
+            }
+        } else if (lp != 0 && rp == IMAGE_WIDTH) {
+            /* ä»…å·¦ä¾§æœ‰æ•ˆ */
+            j  = (lp + 10 >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : lp + 10;
+            jj = (lp - 5  <= 1)               ? 1               : lp - 5;
+            L->left_edge[i] = 0;
+            for (; j >= jj; j--) {
+                if (g_img.binary[i][j-1] == BLACK && g_img.binary[i][j] == WHITE) {
+                    L->left_edge[i] = j; break;
+                }
+            }
+            /* å³ä¾§å…¨è¡Œæ‰«æ */
+            L->right_edge[i] = IMAGE_WIDTH;
+            j = L->mid_line[i+1];
+            j = (j >= IMAGE_WIDTH - 2) ? IMAGE_WIDTH - 2 : j;
+            for (; j <= IMAGE_WIDTH - 2; j++) {
+                if (g_img.binary[i][j] == WHITE && g_img.binary[i][j+1] == BLACK) {
+                    L->right_edge[i] = j; break;
+                }
+            }
+        } else if (lp == 0 && rp != IMAGE_WIDTH) {
+            /* ä»…å³ä¾§æœ‰æ•ˆ */
+            j  = (rp - 10 <= 1)               ? 1               : rp - 10;
+            jj = (rp + 5  >= IMAGE_WIDTH - 2)  ? IMAGE_WIDTH - 2 : rp + 5;
+            L->right_edge[i] = IMAGE_WIDTH;
+            for (; j <= jj; j++) {
+                if (g_img.binary[i][j] == WHITE && g_img.binary[i][j+1] == BLACK) {
+                    L->right_edge[i] = j; break;
+                }
+            }
+            /* å·¦ä¾§å…¨è¡Œæ‰«æ */
+            L->left_edge[i] = 0;
+            j = L->mid_line[i+1];
+            j = (j <= 1) ? 1 : j;
+            for (; j >= 1; j--) {
+                if (g_img.binary[i][j-1] == BLACK && g_img.binary[i][j] == WHITE) {
+                    L->left_edge[i] = j; break;
+                }
+            }
+        } else {
+            /* ä¸¤ä¾§å‡ä¸¢å¤±ï¼šå…¨è¡ŒåŒå‘æ‰«æ */
+            j = L->mid_line[i+1];
+            L->left_edge[i] = 0;
+            for (int jj2 = j; jj2 >= 1; jj2--) {
+                if (g_img.binary[i][jj2-1] == BLACK && g_img.binary[i][jj2] == WHITE) {
+                    L->left_edge[i] = jj2; break;
+                }
+            }
+            L->right_edge[i] = IMAGE_WIDTH;
+            for (int jj2 = j; jj2 <= IMAGE_WIDTH - 2; jj2++) {
+                if (g_img.binary[i][jj2] == WHITE && g_img.binary[i][jj2+1] == BLACK) {
+                    L->right_edge[i] = jj2; break;
+                }
+            }
+        }
+
+        /* ä¸­çº¿è®¡ç®—ï¼ˆåŒç¬¬ä¸€é˜¶æ®µé€»è¾‘ï¼‰ */
+        int lf = L->left_edge[i], rf = L->right_edge[i];
+        int lp2 = L->left_edge[i+1], rp2 = L->right_edge[i+1];
+
+        if ((rf - lf) >= (rp2 - lp2 + 1)) {
+            L->mid_line[i] = L->mid_line[i+1];
+        } else if (lf != 0 && rf != IMAGE_WIDTH) {
+            L->mid_line[i] = (lf + rf) / 2;
+        } else if (lf != 0 && rf == IMAGE_WIDTH) {
+            E->right_cnt++;
+            if (E->right_start_row == 0) E->right_start_row = i;
+            L->mid_line[i] = (lp2 != 0)
+                             ? (L->mid_line[i+1] + lf - lp2)
+                             : (lf + g_road_width[i] / 2);
+        } else if (lf == 0 && rf != IMAGE_WIDTH) {
+            E->left_cnt++;
+            if (E->left_start_row == 0) E->left_start_row = i;
+            L->mid_line[i] = (rp2 != IMAGE_WIDTH)
+                             ? (L->mid_line[i+1] + rf - rp2)
+                             : (rf - g_road_width[i] / 2);
+        } else {
+            E->both_cnt++;
+            L->mid_line[i] = L->mid_line[i+1];
+        }
+
+        /* æ£€æµ‹å‰ç»ç»ˆæ­¢æ¡ä»¶ */
+        if (i <= 4) {
+            g_img.lookahead_row  = i;
+            g_img.available_rows = IMAGE_HEIGHT - 1 - i;
             break;
         }
-        int m = middle_line[i];
-        if (m < 4)
-        {
-            m = 4;
-        }
-        if (m > IMAGE_WIDTH - 4)
-        {
-            m = IMAGE_WIDTH - 4;
-        }
-        if ((left_edge[i] != 0 && left_edge[i] >= IMAGE_WIDTH - 4) ||
-            (right_edge[i] != IMAGE_WIDTH && right_edge[i] <= 4) ||
-            ((i >= 3) && (binary_image[i - 1][m] == BLACK) && (binary_image[i - 1][m - 1] == BLACK) &&
-             (binary_image[i - 1][m + 1] == BLACK))) //×îºóÒ»ĞĞ
-        {
-            set_last_line(i);//i);//×îºóÒ»ĞĞ£¬¶¯Ì¬Ç°Õ°
-            set_available_line(IMAGE_HEIGHT - i);//ÓĞĞ§ĞĞÊı
+
+        int m = L->mid_line[i];
+        m = (m < 4) ? 4 : (m > IMAGE_WIDTH - 4 ? IMAGE_WIDTH - 4 : m);
+
+        int exceed_edge = (lf != 0 && lf >= IMAGE_WIDTH - 4) ||
+                          (rf != IMAGE_WIDTH && rf <= 4)      ||
+                          ((i >= 3) && g_img.binary[i-1][m  ] == BLACK
+                                    && g_img.binary[i-1][m-1] == BLACK
+                                    && g_img.binary[i-1][m+1] == BLACK);
+        if (exceed_edge) {
+            g_img.lookahead_row  = i;
+            g_img.available_rows = IMAGE_HEIGHT - i;
             break;
         }
     }
 }
 
-//¼ÆËã±ß½çĞ±ÂÊµÄ·½²î£¬´ÓIMAGE_HEIGHT - 2Ëãµ½end
-gradient_variance_ty get_edge_gradient_variance(int end, int min_valid_row)
+/* ================================================================
+ * çªå˜ç‚¹æ‰«æ
+ * ================================================================ */
+static void scan_break_points(int start, int end)
 {
-    float gradient_l = 0;
-    float curvity_tmp_l = 0;
-    int gradient_cnt_l = 0;
-    int start_row_l = 40;
-    float gradient_r = 0;
-    float curvity_tmp_r = 0;
-    int gradient_cnt_r = 0;
-    int start_row_r = 40;
-    gradient_variance_ty ret;
+    BreakStats *B = &g_img.breaks;
+    LaneLines  *L = &g_img.lanes;
 
-    for (int row = IMAGE_HEIGHT - 2; row > 40; row--)
-    {
-        if (right_edge[row] < 79)
-        {
-            start_row_r = row;
-            break;
+    int rw_recover = 0, le_recover = 0, re_recover = 0;
+
+    for (int row = start; row > end + 1; row--) {
+        int w_cur  = L->right_edge[row]   - L->left_edge[row];
+        int w_next = L->right_edge[row+1] - L->left_edge[row+1];
+        int w_bp   = (B->road_width_break_cnt > 0)
+                     ? (L->right_edge[B->road_width_break_row] - L->left_edge[B->road_width_break_row])
+                     : 0;
+
+        /* é“è·¯å®½åº¦çªå˜ */
+        if (w_cur > w_next + 5 || (B->road_width_break_cnt > 0 && w_cur > w_bp + 5)) {
+            if (B->road_width_break_cnt == 0)
+                B->road_width_break_row = row + 1;
+            B->road_width_break_cnt++;
+        } else if (B->road_width_break_cnt > 0 && w_cur < L->right_edge[B->road_width_break_row]) {
+            rw_recover++;
+        }
+
+        /* å·¦è¾¹ç•Œçªå˜ */
+        if (L->left_edge[row] - L->left_edge[row+1] < -5 ||
+            (B->left_break_cnt > 0 && L->left_edge[row] - L->left_edge[B->left_break_row] < 0)) {
+            if (B->left_break_cnt == 0)
+                B->left_break_row = row + 1;
+            B->left_break_cnt++;
+        } else if (B->left_break_cnt > 0 && L->left_edge[row] - L->left_edge[B->left_break_row] > 0) {
+            le_recover++;
+        }
+
+        /* å³è¾¹ç•Œçªå˜ */
+        if (L->right_edge[row] - L->right_edge[row+1] > 5 ||
+            (B->right_break_cnt > 0 && L->right_edge[row] - L->right_edge[B->right_break_row] > 0)) {
+            if (B->right_break_cnt == 0)
+                B->right_break_row = row + 1;
+            B->right_break_cnt++;
+        } else if (B->right_break_cnt > 0 && L->right_edge[row] - L->right_edge[B->right_break_row] < 0) {
+            re_recover++;
         }
     }
-    for (int row = start_row_r; row >= end; row--)
-    {
-        gradient_r += (right_edge[row] - right_edge[row + 1]);
-        gradient_cnt_r++;
-    }
-    if (gradient_cnt_r >= 10 && start_row_r > min_valid_row)
-    {
-        gradient_r /= (float) gradient_cnt_r;
-        for (int row = start_row_r; row >= end; row--)
-        {
-            curvity_tmp_r += pow((right_edge[row] - right_edge[row + 1] - gradient_r), 2);
+
+    /* æ‹ç‚¹æ£€æµ‹ */
+    for (int i = start - 1; i > end + 1; i--) {
+        int dl  = L->left_edge[i]  - L->left_edge[i+1];
+        int dl2 = L->left_edge[i-1] - L->left_edge[i];
+        if (dl >= -1 && dl <= 2 && dl2 <= -12) {
+            B->left_inflexion.valid = 1;
+            B->left_inflexion.row   = i;
+            B->left_inflexion.col   = L->left_edge[i];
         }
-        curvity_tmp_r /= (float) gradient_cnt_r;
 
-        //first_order_lpf(&curvity_r, curvity_tmp_r, 50, 200);
-        ret.right_edge = curvity_tmp_r;
-    }
-    else
-    {
-        ret.right_edge = 10;
-    }
-
-    for (int row = IMAGE_HEIGHT - 2; row > 40; row--)
-    {
-        if (left_edge[row] > 0)
-        {
-            start_row_l = row;
-            break;
+        int dr  = L->right_edge[i]  - L->right_edge[i+1];
+        int dr2 = L->right_edge[i-1] - L->right_edge[i];
+        if (dr <= 1 && dr >= -2 && dr2 >= 12) {
+            B->right_inflexion.valid = 1;
+            B->right_inflexion.row   = i;
+            B->right_inflexion.col   = L->right_edge[i];
         }
     }
-    for (int row = start_row_l; row >= end; row--)
-    {
-        gradient_l += (left_edge[row] - left_edge[row + 1]);
-        gradient_cnt_l++;
-    }
-    if (gradient_cnt_l >= 10 && start_row_l > min_valid_row)
-    {
-        gradient_l /= (float) gradient_cnt_l;
-        for (int row = start_row_l; row >= end; row--)
-        {
-            curvity_tmp_l += pow((left_edge[row] - left_edge[row + 1] - gradient_l), 2);
-        }
-        curvity_tmp_l /= (float) gradient_cnt_l;
+    (void)rw_recover; (void)le_recover; (void)re_recover;
+}
 
-        //first_order_lpf(&curvity_l, curvity_tmp_l, 50, 200);
-        ret.left_edge = curvity_tmp_l;
-    }
-    else
+/* ================================================================
+ * åœ†å½¢èµ›é“é¢„åˆ¤
+ * ================================================================ */
+CircleForecast image_search_circle(void)
+{
+    CircleForecast  ret;
+    EdgeGradientVar egv = image_get_edge_grad_var(IMG_LAST_LINE + 2, 45);
+    BreakStats     *B   = &g_img.breaks;
+
+    ret.left_grad_var  = egv.left;
+    ret.right_grad_var = egv.right;
+
+    /* å·¦ç¯åˆ¤æ–­ */
+    if (B->road_width_break_row > 30 && B->road_width_break_cnt > 7 &&
+        B->left_break_row > 30 &&
+        (B->left_break_cnt - B->right_break_cnt) > 7 &&
+        g_img.left_circle_prehandle <= 0 &&
+        B->right_break_cnt < 3 && egv.right < 0.4f)
     {
-        ret.left_edge = 10;
+        ret.fore_dir = ROAD_DIR_LEFT;
+    }
+    /* å³ç¯åˆ¤æ–­ */
+    else if (B->road_width_break_row > 30 && B->road_width_break_cnt > 7 &&
+             B->right_break_row > 30 &&
+             (B->right_break_cnt - B->left_break_cnt) > 7 &&
+             B->left_break_cnt <= 0 &&
+             B->left_break_cnt < 3 && egv.left < 0.4f)
+    {
+        ret.fore_dir = ROAD_DIR_RIGHT;
+    }
+    else {
+        ret.fore_dir = ROAD_DIR_NONE;
     }
 
     return ret;
 }
 
-int right_circle_prehandle = 0;
-int left_circle_prehandle = 0;
-int cross_handle = 0;
-float circle_prehandle_dis = 0;
-circle_forecast_ty circle_forecast;
-
-circle_forecast_ty search_circle(void)
+/* ================================================================
+ * è¾¹ç•Œæ¢¯åº¦æ–¹å·®
+ * ================================================================ */
+EdgeGradientVar image_get_edge_grad_var(int end_row, int min_valid_row)
 {
-    circle_forecast_ty ret;
-    gradient_variance_ty edge_grad_var = get_edge_gradient_variance(get_last_line() + 2, 45);
-    ret.left_edge_grad_var = edge_grad_var.left_edge;
-    ret.right_edge_grad_var = edge_grad_var.right_edge;
-//        printf("g:%.2f,%.2f\n\r", edge_grad_var.left_edge, edge_grad_var.right_edge);
+    LaneLines       *L   = &g_img.lanes;
+    EdgeGradientVar  ret = {10.0f, 10.0f};
 
-//        printf("rwbp:%d\r\n",road_width_break_point);
-//        printf("rwbc:%d\r\n",road_width_break_cnt);
-//
-//        printf("rebp:%d\r\n",right_edge_break_point);
-//        printf("rebc:%d\r\n",right_edge_break_cnt);
-//
-//        printf("lebc:%d\r\n",left_edge_break_cnt);
-//        printf("rebc-lebc:%d\r\n",right_edge_break_cnt - left_edge_break_cnt);
-//
-//        printf("egv_l:%.2f\r\n",edge_grad_var.left_edge);
-
-
-    //×ó»·²¹Ïß
-    if (road_width_break_point > 30 && road_width_break_cnt > 7 && left_edge_break_point > 30
-        && left_edge_break_cnt - right_edge_break_cnt > 7 && left_circle_prehandle <= 0
-        && right_edge_break_cnt < 3 && edge_grad_var.right_edge < 0.4)
+    /* å³è¾¹ç•Œ */
     {
-        ret.circle_fore_dir = 0;
+        int start = 40;
+        for (int row = IMAGE_HEIGHT - 2; row > 40; row--) {
+            if (L->right_edge[row] < IMAGE_WIDTH - 1) { start = row; break; }
+        }
+        float grad = 0.0f; int cnt = 0;
+        for (int row = start; row >= end_row; row--) {
+            grad += (L->right_edge[row] - L->right_edge[row+1]);
+            cnt++;
+        }
+        if (cnt >= 10 && start > min_valid_row) {
+            grad /= cnt;
+            float var = 0.0f;
+            for (int row = start; row >= end_row; row--) {
+                float d = (float)(L->right_edge[row] - L->right_edge[row+1]) - grad;
+                var += d * d;
+            }
+            ret.right = var / cnt;
+        }
     }
-        //ÓÒ»·²¹Ïß
-    else if (road_width_break_point > 30 && road_width_break_cnt > 7 && right_edge_break_point > 30
-             && right_edge_break_cnt - left_edge_break_cnt > 7 && left_edge_break_cnt <= 0
-             && left_edge_break_cnt < 3 && edge_grad_var.left_edge < 0.4)
+
+    /* å·¦è¾¹ç•Œ */
     {
-        ret.circle_fore_dir = 1;
-    }
-    else
-    {
-        ret.circle_fore_dir = -1;
+        int start = 40;
+        for (int row = IMAGE_HEIGHT - 2; row > 40; row--) {
+            if (L->left_edge[row] > 0) { start = row; break; }
+        }
+        float grad = 0.0f; int cnt = 0;
+        for (int row = start; row >= end_row; row--) {
+            grad += (L->left_edge[row] - L->left_edge[row+1]);
+            cnt++;
+        }
+        if (cnt >= 10 && start > min_valid_row) {
+            grad /= cnt;
+            float var = 0.0f;
+            for (int row = start; row >= end_row; row--) {
+                float d = (float)(L->left_edge[row] - L->left_edge[row+1]) - grad;
+                var += d * d;
+            }
+            ret.left = var / cnt;
+        }
     }
 
     return ret;
 }
 
-int circle_image_process_complete = 0;
-int break_point[2];
-//int circle_forecast_process = 0;
-int circle_entry_process = 0;
-int in_circle_mending = 0;
-int circle_exit_detect = 0;
-int circle_exit_process = 0;
-
-void process_circle_in_image(int dir)
+/* ================================================================
+ * ç¯å½¢èµ›é“å›¾åƒä¿®æ­£
+ * ================================================================ */
+static void process_circle(int dir)
 {
-    //×ó»·
-    if (0 == dir)
-    {
-        if (1 == left_circle_forecast_flag)
-        {
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                middle_line[row] = right_edge[row] - road_width[row] / 2;
-                left_edge[row] = right_edge[row] - road_width[row];
-            }
+    LaneLines *L = &g_img.lanes;
 
-        }
-        if (circle_entry_process == 1)
-        {
-            break_point[1] = 0;
-            break_point[0] = 0;
-            for (int row = IMAGE_HEIGHT - 1; row > 18; row--)
-            {
-                //ÖØĞÂÑ°ÕÒÓÒÏß
-                if (IMAGE_HEIGHT - 1 == row)
-                {
-                    right_edge[row] = IMAGE_WIDTH - 1;
-                    for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                        {
-                            right_edge[row] = col;
-                            break;
+    /* ---------- å·¦ç¯ ---------- */
+    if (dir == ROAD_DIR_LEFT) {
+        if (g_img.circle_entry_active == 1) {
+            int bp_row = 0, bp_col = 0;
+            for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+                if (IMAGE_HEIGHT - 1 == row) {
+                    L->right_edge[row] = IMAGE_WIDTH - 1;
+                    for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                            L->right_edge[row] = col; break;
+                        }
+                    }
+                } else {
+                    L->right_edge[row] = IMAGE_WIDTH - 1;
+                    for (int col = L->right_edge[row+1] - 3; col < IMAGE_WIDTH - 1; col++) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                            L->right_edge[row] = col; break;
                         }
                     }
                 }
-                else
-                {
-                    right_edge[row] = IMAGE_WIDTH - 1;
-                    for (int col = right_edge[row + 1] - 3; col < IMAGE_WIDTH - 1; col++)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                        {
-                            right_edge[row] = col;
-                            break;
-                        }
+                L->left_edge[row] = 0;
+                for (int col = L->right_edge[row]; col > 0; col--) {
+                    if (g_img.binary[row][col-1] == BLACK && g_img.binary[row][col] == WHITE) {
+                        L->left_edge[row] = col; break;
                     }
                 }
-                //¸ù¾İÓÒÏßÏò×óÑ°ÕÒ×óÏß
-                left_edge[row] = 0;
-                for (int col = right_edge[row]; col > 0; col--)
-                {
-                    if (BLACK == binary_image[row][col - 1] && WHITE == binary_image[row][col])
-                    {
-                        left_edge[row] = col;
-                        break;
-                    }
-                }
-                //printf("%d:%d:%d\n\r", row, left_edge[row], right_edge[row]);
-                //¸ù¾İ×óÓÒ¿í¶È¼ÆËã×óºóÒ»ĞĞ
-                if ((right_edge[row] - left_edge[row] < 8 && row <= 30) || row <= 20)
-                {
-                    set_last_line(row);
-                    //printf("------%d\n\r", row);
-                    //·´ÏòÑ°ÕÒÍ»±äµã
-                    for (int j = row + 2; j < IMAGE_HEIGHT - 1; j++)
-                    {
-                        //printf("--%d:%d\n\r", j, left_edge[j]);
-                        if (-left_edge[j + 1] + left_edge[j] > 6 && right_edge[j] - left_edge[j] > 5 &&
-                            right_edge[j] - left_edge[j] < 50)
+                if ((L->right_edge[row] - L->left_edge[row] < 8 && row <= 30) || row <= 20) {
+                    g_img.lookahead_row = row;
+                    /* åå‘æ‰¾çªå˜ç‚¹å¹¶æ’å€¼ä¿®æ­£ */
+                    for (int j = row + 2; j < IMAGE_HEIGHT - 1; j++) {
+                        if (-L->left_edge[j+1] + L->left_edge[j] > 6 &&
+                            L->right_edge[j] - L->left_edge[j] > 5 &&
+                            L->right_edge[j] - L->left_edge[j] < 50)
                         {
-                            break_point[0] = j;
-                            break_point[1] = left_edge[j];
-                            int modify_point = j + 30;
-                            if (modify_point > IMAGE_HEIGHT - 1)
-                                modify_point = IMAGE_HEIGHT - 1;
-                            if (modify_point < 0)
-                                modify_point = 0;
-                            float k = (float) (right_edge[modify_point] - left_edge[j]) / (modify_point - j);
-                            //ĞŞ²¹Í»±äµãÏÂ·½µÄÓÒ±ß½ç
-                            for (int i = j; i <= modify_point; i++)
-                            {
-                                right_edge[i] = (int) (left_edge[j] + k * (i - j));
-                            }
-                            //ĞŞ²¹Í»±äµãÉÏ·½ÓÒ±ß½ç
-                            for (int i = j; i >= 0; i--)
-                            {
-                                right_edge[i] = IMAGE_WIDTH - 1;
-                                for (int z = ((right_edge[i + 1] - 10) > 2 ? (right_edge[i + 1] - 10) : 2);
-                                     z < right_edge[i + 1] + 2; z++)
-                                {
-                                    if (WHITE == binary_image[i][z - 1] && BLACK == binary_image[i][z])
-                                    {
-                                        right_edge[i] = z;
-                                        break;
+                            bp_row = j; bp_col = L->left_edge[j];
+                            int mp = j + 30;
+                            if (mp > IMAGE_HEIGHT - 1) mp = IMAGE_HEIGHT - 1;
+                            float k = (float)(L->right_edge[mp] - bp_col) / (mp - j);
+                            for (int ii = j; ii <= mp; ii++)
+                                L->right_edge[ii] = (int)(bp_col + k * (ii - j));
+                            /* ç»§ç»­å‘ä¸Šè¡¥çº¿ */
+                            for (int ii = j; ii >= 0; ii--) {
+                                L->right_edge[ii] = IMAGE_WIDTH - 1;
+                                int zs = (L->right_edge[ii+1] - 10 > 2) ? L->right_edge[ii+1] - 10 : 2;
+                                int ze = L->right_edge[ii+1] + 2;
+                                for (int z = zs; z < ze; z++) {
+                                    if (g_img.binary[ii][z-1] == WHITE && g_img.binary[ii][z] == BLACK) {
+                                        L->right_edge[ii] = z; break;
                                     }
                                 }
-                                if (right_edge[i] - right_edge[i + 1] > 1)
-                                {
-                                    set_last_line(i);
-                                    //ÔÙ´ÎÖØĞÂÑ°×ó±ß½ç
-                                    for (int a = i; a <= j + 1; a++)
-                                    {
-                                        left_edge[a] = 0;
-                                        for (int b = right_edge[a]; b > 0; b--)
-                                        {
-                                            if (BLACK == binary_image[a][b - 1] && WHITE == binary_image[a][b])
-                                            {
-                                                left_edge[a] = b;
-                                                break;
+                                if (L->right_edge[ii] - L->right_edge[ii+1] > 1) {
+                                    g_img.lookahead_row = ii;
+                                    for (int a = ii; a <= j + 1; a++) {
+                                        L->left_edge[a] = 0;
+                                        for (int b = L->right_edge[a]; b > 0; b--) {
+                                            if (g_img.binary[a][b-1] == BLACK && g_img.binary[a][b] == WHITE) {
+                                                L->left_edge[a] = b; break;
                                             }
                                         }
-                                        //if(BLACK == binary_image[a - 1][left_edge[a]])
-                                        //  break;
                                     }
                                     break;
                                 }
                             }
-                            //printf("break:%d k:%f\n\r", j, k);
-                            //¼ÆËãÖĞÏß
-                            for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                            {
-                                if (left_edge[a] > 0)
-                                    middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                                else
-                                {
-                                    //°ë¿í²¹Ïß
-                                    middle_line[a] = right_edge[a] - road_width[a] / 2;
-                                    //Ğ±ÂÊ²¹Ïß
-                                    //middle_line[a] = middle_line[a + 1] + (right_edge[a] - right_edge[a + 1]);
-                                }
+                            /* é‡æ–°è®¡ç®—ä¸­çº¿ */
+                            for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                                L->mid_line[a] = (L->left_edge[a] > 0)
+                                                ? (L->right_edge[a] + L->left_edge[a]) / 2
+                                                : (L->right_edge[a] - g_road_width[a] / 2);
                             }
-
                             break;
                         }
                     }
                     break;
                 }
             }
-            if (IMAGE_HEIGHT - 8 < break_point[0] ||
-                break_point[1] > IMAGE_WIDTH - 10/*|| (break_point[1] > 74 && break_point[0] > 0)*/)
-                circle_image_process_complete = 1;
-            //printf("%d,%d\n\r", break_point[0], break_point[1]);
+            if (IMAGE_HEIGHT - 8 < bp_row || bp_col > IMAGE_WIDTH - 10)
+                g_img.circle_proc_complete = 1;
         }
-        if (in_circle_mending == 1)//×ó»·
-        {
-            break_point[1] = 0;
-            break_point[0] = 0;
-            //ĞŞ²¹»·³ö¿Ú²¿·Ö£¬²¢¼ì²â»·³ö¿Ú
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                //ÖØĞÂÑ°ÕÒ×óÏß
-                if (IMAGE_HEIGHT - 1 == row)
-                {
-                    left_edge[row] = 0;
-                    for (int col = IMAGE_WIDTH / 2; col > 0; col--)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                        {
-                            left_edge[row] = col;
-                            break;
+
+        if (g_img.circle_mending_active == 1) {
+            int bp_row = 0;
+            for (int row = IMAGE_HEIGHT - 1; row > g_img.lookahead_row; row--) {
+                /* é‡æ–°æ‰¾å·¦/å³è¾¹ç•Œï¼ˆä»å·¦å‘å³æ‰¾å·¦è¾¹ç•Œï¼Œå†æ‰¾å³è¾¹ç•Œï¼‰ */
+                if (IMAGE_HEIGHT - 1 == row) {
+                    L->left_edge[row] = 0;
+                    for (int col = IMAGE_WIDTH / 2; col > 0; col--) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                            L->left_edge[row] = col; break;
+                        }
+                    }
+                } else {
+                    L->left_edge[row] = 0;
+                    for (int col = L->left_edge[row+1] + 5; col > 0; col--) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                            L->left_edge[row] = col; break;
                         }
                     }
                 }
-                else
-                {
-                    left_edge[row] = 0;
-                    for (int col = left_edge[row + 1] + 5; col > 0; col--)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                        {
-                            left_edge[row] = col;
-                            break;
+                L->right_edge[row] = IMAGE_WIDTH - 1;
+                for (int col = L->left_edge[row]; col < IMAGE_WIDTH - 1; col++) {
+                    if (g_img.binary[row][col+1] == BLACK && g_img.binary[row][col] == WHITE) {
+                        L->right_edge[row] = col; break;
+                    }
+                }
+                if (bp_row == 0 && L->right_edge[row] - L->right_edge[row+1] > 1)
+                    bp_row = row;
+            }
+            if (bp_row != 0) {
+                int mp = g_img.lookahead_row;
+                float k = (float)(0 - L->right_edge[bp_row]) / (mp - bp_row);
+                for (int i = bp_row; i >= mp; i--)
+                    L->right_edge[i] = (int)(L->right_edge[bp_row] + k * (i - bp_row));
+                for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                    L->mid_line[a] = L->right_edge[a] - g_road_width[a] / 2;
+                    if (bp_row > 45) s_mid_line_keep[a] = L->mid_line[a];
+                }
+            } else {
+                for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                    L->mid_line[a] = (L->right_edge[a] < IMAGE_WIDTH - 5)
+                                    ? (L->right_edge[a] + L->left_edge[a]) / 2
+                                    : s_mid_line_keep[a];
+                }
+            }
+        }
+
+        if (g_img.circle_exit_detect == 1) {
+            for (int row = g_img.lookahead_row; row < IMAGE_HEIGHT - 1; row++) {
+                if (L->left_edge[row] - L->left_edge[row+1] > 3) {
+                    g_img.breaks.left_break_row = row;
+                    break;
+                }
+            }
+        }
+        if (g_img.circle_exit_active == 1) {
+            for (int row = IMAGE_HEIGHT - 1; row > g_img.lookahead_row; row--) {
+                L->mid_line[row]  = L->right_edge[row] - g_road_width[row] / 2;
+                L->left_edge[row] = L->right_edge[row] - g_road_width[row];
+            }
+        }
+    }
+
+    /* ---------- å³ç¯ï¼ˆå¯¹ç§°é€»è¾‘ï¼Œå·¦å³äº’æ¢ï¼‰ ---------- */
+    else if (dir == ROAD_DIR_RIGHT) {
+        if (g_img.circle_entry_active == 1) {
+            int bp_row = 0, bp_col = 0;
+            for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+                if (IMAGE_HEIGHT - 1 == row) {
+                    L->left_edge[row] = 0;
+                    for (int col = IMAGE_WIDTH / 2; col > 0; col--) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                            L->left_edge[row] = col; break;
+                        }
+                    }
+                } else {
+                    L->left_edge[row] = 0;
+                    for (int col = L->left_edge[row+1] + 3; col > 0; col--) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                            L->left_edge[row] = col; break;
                         }
                     }
                 }
-                //¸ù¾İ×óÏßÏòÓÒÑ°ÕÒÓÒÏß
-                right_edge[row] = IMAGE_WIDTH - 1;
-                for (int col = left_edge[row]; col < IMAGE_WIDTH - 1; col++)
-                {
-                    if (BLACK == binary_image[row][col + 1] && WHITE == binary_image[row][col])
-                    {
-                        right_edge[row] = col;
+                L->right_edge[row] = IMAGE_WIDTH - 1;
+                for (int col = L->left_edge[row]; col < IMAGE_WIDTH - 1; col++) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                        L->right_edge[row] = col; break;
+                    }
+                }
+                if ((L->right_edge[row] - L->left_edge[row] < 8 && row <= 30) || row <= 20) {
+                    g_img.lookahead_row = row;
+                    for (int j = row + 2; j < IMAGE_HEIGHT - 1; j++) {
+                        if (L->right_edge[j] - L->right_edge[j+1] > 6 &&
+                            L->right_edge[j] - L->left_edge[j] > 5 &&
+                            L->right_edge[j] - L->left_edge[j] < 50)
+                        {
+                            bp_row = j; bp_col = L->right_edge[j];
+                            int mp = j + 30;
+                            if (mp > IMAGE_HEIGHT - 1) mp = IMAGE_HEIGHT - 1;
+                            float k = (float)(L->left_edge[mp] - bp_col) / (mp - j);
+                            for (int ii = j; ii <= mp; ii++)
+                                L->left_edge[ii] = (int)(bp_col + k * (ii - j));
+                            for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                                L->mid_line[a] = (L->right_edge[a] < IMAGE_WIDTH - 5)
+                                                ? (L->right_edge[a] + L->left_edge[a]) / 2
+                                                : (L->left_edge[a] + g_road_width[a] / 2);
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            if (IMAGE_HEIGHT - 8 < bp_row || bp_col < 10)
+                g_img.circle_proc_complete = 1;
+        }
+
+        if (g_img.circle_mending_active == 1) {
+            int bp_row = 0;
+            for (int row = IMAGE_HEIGHT - 1; row > g_img.lookahead_row; row--) {
+                if (IMAGE_HEIGHT - 1 == row) {
+                    L->right_edge[row] = IMAGE_WIDTH - 1;
+                    for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                            L->right_edge[row] = col; break;
+                        }
+                    }
+                } else {
+                    L->right_edge[row] = IMAGE_WIDTH - 1;
+                    for (int col = L->right_edge[row+1] - 5; col < IMAGE_WIDTH - 1; col++) {
+                        if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                            L->right_edge[row] = col; break;
+                        }
+                    }
+                }
+                L->left_edge[row] = 0;
+                for (int col = L->right_edge[row]; col > 0; col--) {
+                    if (g_img.binary[row][col-1] == BLACK && g_img.binary[row][col] == WHITE) {
+                        L->left_edge[row] = col; break;
+                    }
+                }
+                if (bp_row == 0 && L->left_edge[row] - L->left_edge[row+1] > 1)
+                    bp_row = row;
+            }
+            if (bp_row != 0) {
+                int mp = g_img.lookahead_row;
+                float k = (float)(0 - L->left_edge[bp_row]) / (mp - bp_row);
+                for (int i = bp_row; i >= mp; i--)
+                    L->left_edge[i] = (int)(L->left_edge[bp_row] + k * (i - bp_row));
+                for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                    L->mid_line[a] = L->left_edge[a] + g_road_width[a] / 2;
+                    if (bp_row > 45) s_mid_line_keep[a] = L->mid_line[a];
+                }
+            } else {
+                for (int a = IMAGE_HEIGHT - 1; a > g_img.lookahead_row; a--) {
+                    L->mid_line[a] = (L->left_edge[a] > 5)
+                                    ? (L->right_edge[a] + L->left_edge[a]) / 2
+                                    : s_mid_line_keep[a];
+                }
+            }
+        }
+
+        if (g_img.circle_exit_detect == 1) {
+            for (int row = g_img.lookahead_row; row < IMAGE_HEIGHT - 1; row++) {
+                if (L->right_edge[row] - L->right_edge[row+1] < -3) {
+                    g_img.breaks.right_break_row = row;
+                    break;
+                }
+            }
+        }
+        if (g_img.circle_exit_active == 1) {
+            for (int row = IMAGE_HEIGHT - 1; row > g_img.lookahead_row; row--) {
+                L->mid_line[row]   = L->left_edge[row] + g_road_width[row] / 2;
+                L->right_edge[row] = L->left_edge[row] + g_road_width[row];
+            }
+        }
+    }
+}
+
+/* ================================================================
+ * äº¤å‰è·¯å£æ£€æµ‹ä¸ä¿®æ­£
+ * ================================================================ */
+void image_search_cross(void)
+{
+    LaneLines *L = &g_img.lanes;
+    int lbp = 0, rbp = 0;
+    g_img.is_cross = 0;
+
+    for (int row = g_img.lookahead_row + 1; row < IMAGE_HEIGHT - 10; row++) {
+        if (L->left_edge[row]  - L->left_edge[row+1]  >  4) lbp = row;
+        if (L->right_edge[row] - L->right_edge[row+1] < -4) rbp = row;
+        if (lbp != 0 && rbp != 0 && (int)fabs((float)(rbp - lbp)) < 3) {
+            g_img.is_cross = 1;
+            for (int r = IMAGE_HEIGHT - 1; r > g_img.lookahead_row; r--) {
+                L->right_edge[r] = 40 + g_road_width[r] / 2;
+                L->left_edge[r]  = 40 - g_road_width[r] / 2;
+                L->mid_line[r]   = 40;
+            }
+        }
+    }
+}
+
+/* ================================================================
+ * éšœç¢ç‰©ï¼ˆé¿éšœï¼‰æ‰«æè¾…åŠ©
+ * ================================================================ */
+static void scan_black_pixels(int row, int *left_cnt, int *right_cnt)
+{
+    *left_cnt  = 0;
+    *right_cnt = 0;
+    for (int i = IMAGE_WIDTH / 2; i > 5; i--)
+        if (g_img.binary[row][i] == BLACK) (*left_cnt)++;
+    for (int j = IMAGE_WIDTH / 2; j < IMAGE_WIDTH - 5; j++)
+        if (g_img.binary[row][j] == BLACK) (*right_cnt)++;
+}
+
+int image_search_block(void)
+{
+    LaneLines *L   = &g_img.lanes;
+    int bz  = 30; /* å‚è€ƒè¡Œ */
+    int w0  = abs(L->right_edge[bz-10] - L->left_edge[bz-10]);
+    int w1  = abs(L->right_edge[bz]    - L->left_edge[bz]);
+    int w2  = abs(L->right_edge[bz+10] - L->left_edge[bz+10]);
+
+    if (abs(w1 - w0) < 15 || abs(w2 - w1) > 20) {
+        int lc = 0, rc = 0;
+        scan_black_pixels(35, &lc, &rc);
+        if (lc + rc > 32) {
+            int total_lose = g_img.loss.left_cnt + g_img.loss.right_cnt;
+            if (total_lose < 33 && lc > rc) g_img.block_dir = 1;
+            if (total_lose < 33 && rc > lc) g_img.block_dir = 2;
+        }
+    }
+    return g_img.block_dir;
+}
+
+static void process_block(int dir)
+{
+    LaneLines *L = &g_img.lanes;
+    int offset = (dir == 1) ? +30 : -30;
+    for (int row = IMAGE_HEIGHT - 1; row > 0; row--)
+        L->mid_line[row] += offset;
+}
+
+/* ================================================================
+ * è½¦åº“æ£€æµ‹
+ * ================================================================ */
+int image_search_barn(int dir, int valid)
+{
+    LaneLines *L      = &g_img.lanes;
+    int        is_barn = 0;
+
+    g_img.barn_break_row = 0;
+
+    if (dir == ROAD_DIR_LEFT) {
+        /* é‡æ–°æ‰«æå³è¾¹ç•Œ */
+        for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+            s_tmp_right[row] = IMAGE_WIDTH - 1;
+            if (valid) L->right_edge[row] = IMAGE_WIDTH - 1;
+            if (row == IMAGE_HEIGHT - 1) {
+                for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                        s_tmp_right[row] = col;
+                        if (valid) L->right_edge[row] = col;
                         break;
                     }
                 }
-                if (break_point[0] == 0 && right_edge[row] - right_edge[row + 1] > 1)
-                {
-                    break_point[0] = row;
-                    break_point[1] = right_edge[row];
-                }
-            }
-            if (break_point[0] != 0)
-            {
-                int modify_point = get_last_line();
-                float k = (float) (0 - right_edge[(break_point[0])]) / (modify_point - (break_point[0]));
-                //ĞŞ²¹Í»±äµãÉÏ·½ÓÒ±ß½ç
-                for (int i = break_point[0]; i >= modify_point; i--)
-                {
-                    right_edge[i] = (int) (right_edge[(break_point[0])] + k * (i - (break_point[0])));
-                }
-                for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                {
-                    //if(right_edge[a] < 75)
-                    //   middle_line[a] = right_edge[a] - road_width[a] / 2;
-                    //middle_line[a] = middle_line[a + 1] + (right_edge[a] - right_edge[a + 1]);
-                    //       middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                    //else
-                    // {
-
-                    //°ë¿í²¹Ïß
-                    middle_line[a] = right_edge[a] - road_width[a] / 2;
-                    //Ğ±ÂÊ²¹Ïß
-                    //middle_line[a] = middle_line[a + 1] + (right_edge[a] - right_edge[a + 1]);
-                    if (break_point[0] > 45)
-                    {
-                        middle_line_keep[a] = middle_line[a];
-                    }
-                    // }
-
-                }
-            }
-            else
-            {
-                for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                {
-                    if (right_edge[a] < 75)
-                        //middle_line[a] = right_edge[a] - road_width[a] / 2;
-                        middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                    else
-                    {
-                        //°ë¿í²¹Ïß
-                        //middle_line[a] = right_edge[a] - road_width[a] / 2;
-                        //Ğ±ÂÊ²¹Ïß
-                        //middle_line[a] = middle_line[a + 1] + (right_edge[a] - right_edge[a + 1]);
-                        middle_line[a] = middle_line_keep[a];
-                    }
-                }
-            }
-        }
-        if (circle_exit_detect == 1)
-        {
-            for (int row = get_last_line(); row < IMAGE_HEIGHT - 1; row++)
-            {
-                if (left_edge[row] - left_edge[row + 1] > 3)
-                {
-                    break_point[0] = row;
-                    break_point[1] = left_edge[row];
-                    break;
-                }
-            }
-        }
-        if (circle_exit_process == 1)
-        {
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                middle_line[row] = right_edge[row] - road_width[row] / 2;
-                left_edge[row] = right_edge[row] - road_width[row];
-            }
-        }
-    }
-    else if (1 == dir)//ÓÒ»·
-    {
-        if (1 == right_circle_forecast_flag)
-        {
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                middle_line[row] = left_edge[row] + road_width[row] / 2;
-                right_edge[row] = left_edge[row] + road_width[row];
-            }
-        }
-
-        if (circle_entry_process == 1)
-        {
-            break_point[0] = 0;
-            break_point[1] = IMAGE_WIDTH;
-            for (int row = IMAGE_HEIGHT - 1; row > 18; row--)
-            {
-                //ÖØĞÂÑ°ÕÒ×óÏß
-                if (IMAGE_HEIGHT - 1 == row)
-                {
-                    left_edge[row] = 0;
-                    for (int col = IMAGE_WIDTH / 2; col > 0; col--)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                        {
-                            left_edge[row] = col;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    left_edge[row] = 0;
-                    for (int col = left_edge[row + 1] + 3; col > 0; col--)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                        {
-                            left_edge[row] = col;
-                            break;
-                        }
-                    }
-                }
-                //¸ù¾İ×óÏßÏòÓÒÑ°ÕÒÓÒÏß
-                right_edge[row] = IMAGE_WIDTH - 1;
-                for (int col = left_edge[row]; col < IMAGE_WIDTH - 1; col++)
-                {
-                    if (BLACK == binary_image[row][col + 1] && WHITE == binary_image[row][col])
-                    {
-                        right_edge[row] = col;
+            } else {
+                int cs = (s_tmp_right[row+1] + 5 > IMAGE_WIDTH - 2)
+                         ? (s_tmp_right[row+1] + 5) : (IMAGE_WIDTH - 2);
+                int ce = (s_tmp_right[row+1] - 8 > 0) ? (s_tmp_right[row+1] - 8) : 0;
+                for (int col = cs; col > ce; col--) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                        s_tmp_right[row] = col;
+                        if (valid) L->right_edge[row] = col;
                         break;
                     }
                 }
-                if ((right_edge[row] - left_edge[row] < 8 && row <= 30) || row <= 20)
-                {
-                    set_last_line(row);
-
-                    //printf("------%d\n\r", row);
-                    //·´ÏòÑ°ÕÒÍ»±äµã
-                    for (int j = row + 2; j < IMAGE_HEIGHT - 1; j++)
-                    {
-                        //printf("--%d:%d\n\r", j, left_edge[j]);
-                        if (right_edge[j + 1] - right_edge[j] > 6 && right_edge[j] - left_edge[j] > 5 &&
-                            right_edge[j] - left_edge[j] < 50)
-                        {
-                            break_point[0] = j;
-                            break_point[1] = right_edge[j];
-                            int modify_point = j + 30;
-                            if (modify_point > IMAGE_HEIGHT - 1)
-                                modify_point = IMAGE_HEIGHT - 1;
-                            if (modify_point < 0)
-                                modify_point = 0;
-                            float k = (float) (left_edge[modify_point] - right_edge[j]) / (modify_point - j);
-                            //ĞŞ²¹Í»±äµãÏÂ·½µÄ×ó±ß½ç
-                            for (int i = j; i <= modify_point; i++)
-                            {
-                                left_edge[i] = (int) (right_edge[j] + k * (i - j));
-                            }
-                            //ĞŞ²¹Í»±äµãÉÏ·½×ó±ß½ç
-                            for (int i = j; i >= 0; i--)
-                            {
-                                left_edge[i] = 0;
-                                for (int z = ((left_edge[i + 1] + 10) < IMAGE_WIDTH - 2 ? (left_edge[i + 1] + 10) :
-                                              IMAGE_WIDTH - 2); z > left_edge[i + 1] - 2; z--)
-                                {
-                                    if (WHITE == binary_image[i][z + 1] && BLACK == binary_image[i][z])
-                                    {
-                                        left_edge[i] = z;
-                                        break;
-                                    }
-                                }
-                                if (left_edge[i] - left_edge[i + 1] < -1)
-                                {
-                                    set_last_line(i);
-                                    //ÔÙ´ÎÖØĞÂÑ°ÓÒ±ß½ç
-                                    for (int a = i; a <= j + 1; a++)
-                                    {
-                                        right_edge[a] = IMAGE_WIDTH - 1;
-                                        for (int b = left_edge[a]; b < IMAGE_WIDTH - 1; b++)
-                                        {
-                                            if (BLACK == binary_image[a][b + 1] && WHITE == binary_image[a][b])
-                                            {
-                                                right_edge[a] = b;
-                                                break;
-                                            }
-                                        }
-                                        //if(BLACK == binary_image[a - 1][left_edge[a]])
-                                        //  break;
-                                    }
-                                    break;
-                                }
-                            }
-                            //printf("break:%d k:%f\n\r", j, k);
-                            //¼ÆËãÖĞÏß
-                            for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                            {
-                                if (right_edge[a] < IMAGE_WIDTH - 1)
-                                    middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                                else
-                                {
-                                    //°ë¿í²¹Ïß
-                                    middle_line[a] = left_edge[a] + road_width[a] / 2;
-                                    //Ğ±ÂÊ²¹Ïß
-                                    //middle_line[a] = middle_line[a + 1] + (left_edge[a] - left_edge[a + 1]);
-                                }
-                            }
-                            break;
-                        }
-                    }
-                    break;
-                }
             }
-            //printf("%d,%d\n\r", break_point[0], break_point[1]);
-            if (IMAGE_HEIGHT - 8 < break_point[0] ||
-                break_point[1] < 10/*|| (break_point[1] < 6 && break_point[0] > 30)*/)
-                circle_image_process_complete = 1;
         }
-        if (in_circle_mending == 1)
-        {
-            break_point[1] = IMAGE_WIDTH;
-            break_point[0] = 0;
-            //ĞŞ²¹»·³ö¿Ú²¿·Ö£¬²¢¼ì²â»·³ö¿Ú
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                //ÖØĞÂÑ°ÕÒÓÒÏß
-                if (IMAGE_HEIGHT - 1 == row)
-                {
-                    right_edge[row] = IMAGE_WIDTH - 1;
-                    for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                        {
-                            right_edge[row] = col;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    right_edge[row] = IMAGE_WIDTH - 1;
-                    for (int col = right_edge[row + 1] - 5; col < IMAGE_WIDTH - 1; col++)
-                    {
-                        if (WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                        {
-                            right_edge[row] = col;
-                            break;
-                        }
-                    }
-                }
-                //¸ù¾İÓÒÏßÏò×óÑ°ÕÒ×óÏß
-                left_edge[row] = 0;
-                for (int col = right_edge[row]; col > 0; col--)
-                {
-                    if (BLACK == binary_image[row][col - 1] && WHITE == binary_image[row][col])
-                    {
-                        left_edge[row] = col;
+        /* é‡æ–°æ‰«æå·¦è¾¹ç•Œå¹¶ç»Ÿè®¡è·³å˜ç‚¹ */
+        for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+            s_tmp_left[row] = 0;
+            if (valid) L->left_edge[row] = 0;
+            L->jump_cnt[row] = 0;
+            if (row == IMAGE_HEIGHT - 1) {
+                for (int col = IMAGE_WIDTH / 2; col > 0; col--) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                        s_tmp_left[row] = col;
+                        if (valid) L->left_edge[row] = col;
                         break;
                     }
                 }
-
-                if (break_point[0] == 0 && left_edge[row] - left_edge[row + 1] < -1)
-                {
-                    break_point[0] = row;
-                    break_point[1] = left_edge[row];
-                }
-            }
-            if (break_point[0] != 0)
-            {
-                int modify_point = get_last_line();
-                float k = (float) (IMAGE_WIDTH - 1 - left_edge[break_point[0]]) / (modify_point - (break_point[0]));
-                //ĞŞ²¹Í»±äµãÉÏ·½ÓÒ±ß½ç
-                for (int i = break_point[0]; i >= modify_point; i--)
-                {
-                    left_edge[i] = (int) (left_edge[break_point[0]] + k * (i - (break_point[0])));
-                }
-//                  float k = (float)(IMAGE_WIDTH - 1 - left_edge[break_point[0] + 5]) / (modify_point - (break_point[0] + 5));
-//                  //ĞŞ²¹Í»±äµãÉÏ·½ÓÒ±ß½ç
-//                  for(int i = break_point[0] + 5; i >= modify_point; i--)
-//                  {
-//                          left_edge[i] = (int)(left_edge[break_point[0] + 5] + k * (i - (break_point[0] + 5)));
-//                  }
-//                  float k = (float)(IMAGE_WIDTH - 1 - left_edge[break_point[0] + 10]) / (modify_point - (break_point[0] + 10));
-//                  //ĞŞ²¹Í»±äµãÉÏ·½ÓÒ±ß½ç
-//                  for(int i = break_point[0] + 10; i >= modify_point; i--)
-//                  {
-//                          left_edge[i] = (int)(left_edge[break_point[0] + 10] + k * (i - (break_point[0] + 10)));
-//                  }
-                for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                {
-                    // if(right_edge[a] < IMAGE_WIDTH - 1)
-                    //       middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                    //else
-                    //{
-                    //°ë¿í²¹Ïß
-                    //middle_line[a] = left_edge[a] - road_width[a] / 2;
-                    //Ğ±ÂÊ²¹Ïß
-                    middle_line[a] = middle_line[a + 1] + (left_edge[a] - left_edge[a + 1]);
-                    if (break_point[0] > 45)
+            } else {
+                int ref = (s_tmp_right[row] > IMAGE_WIDTH - 8) ? (IMAGE_WIDTH - 8) : s_tmp_right[row];
+                for (int col = ref; col > 5; col--) {
+                    if (g_img.binary[row][col] != g_img.binary[row][col-1])
+                        L->jump_cnt[row]++;
+                    if (g_img.binary[row][col+6]==WHITE && g_img.binary[row][col+5]==WHITE &&
+                        g_img.binary[row][col+4]==WHITE && g_img.binary[row][col+3]==WHITE &&
+                        g_img.binary[row][col+2]==WHITE && g_img.binary[row][col+1]==WHITE &&
+                        g_img.binary[row][col  ]==WHITE && g_img.binary[row][col-1]==BLACK &&
+                        g_img.binary[row][col-2]==BLACK && g_img.binary[row][col-3]==BLACK &&
+                        g_img.binary[row][col-4]==BLACK && g_img.binary[row][col-5]==BLACK)
                     {
-                        //middle_line_keep[a] = middle_line[a]-30;
-                        middle_line_keep[a] = middle_line[a];
+                        s_tmp_left[row] = col;
+                        if (valid) L->left_edge[row] = col;
+                        break;
                     }
-                    //}
                 }
             }
-            else
-            {
-                for (int a = IMAGE_HEIGHT - 1; a > get_last_line(); a--)
-                {
-                    if (left_edge[a] > 5)
-                        //middle_line[a] = left_edge[a] - road_width[a] / 2;
-                        middle_line[a] = (right_edge[a] + left_edge[a]) / 2;
-                        //middle_line[a] = middle_line[a + 1] + (left_edge[a] - left_edge[a + 1]);
-                    else
+        }
+        int finish_cnt = 0;
+        int start_row  = (g_img.lookahead_row > 30) ? g_img.lookahead_row : 30;
+        for (int i = start_row; i < IMAGE_HEIGHT - 1; i++) {
+            if (L->jump_cnt[i] > 9) {
+                finish_cnt++;
+                g_img.finish_line_row = i;
+            }
+        }
+        if (finish_cnt >= 3 || valid)
+            is_barn = 1;
+    }
+
+    else if (dir == ROAD_DIR_RIGHT) {
+        /* å¯¹ç§°é€»è¾‘ï¼šå…ˆæ‰«å·¦è¾¹ç•Œï¼Œå†æ‰«å³è¾¹ç•Œ */
+        for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+            s_tmp_left[row] = 0;
+            if (valid) L->left_edge[row] = 0;
+            if (row == IMAGE_HEIGHT - 1) {
+                for (int col = IMAGE_WIDTH / 2; col > 0; col--) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                        s_tmp_left[row] = col;
+                        if (valid) L->left_edge[row] = col;
+                        break;
+                    }
+                }
+            } else {
+                int cs = (s_tmp_left[row+1] - 5 > 1) ? (s_tmp_left[row+1] - 5) : 1;
+                int ce = (s_tmp_left[row+1] + 8 < IMAGE_WIDTH - 1) ? (s_tmp_left[row+1] + 8) : (IMAGE_WIDTH - 1);
+                for (int col = cs; col < ce; col++) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col-1] == BLACK) {
+                        s_tmp_left[row] = col;
+                        if (valid) L->left_edge[row] = col;
+                        break;
+                    }
+                }
+            }
+        }
+        for (int row = IMAGE_HEIGHT - 1; row > 18; row--) {
+            s_tmp_right[row] = IMAGE_WIDTH - 1;
+            if (valid) L->right_edge[row] = IMAGE_WIDTH - 1;
+            L->jump_cnt[row] = 0;
+            if (row == IMAGE_HEIGHT - 10) {
+                for (int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++) {
+                    if (g_img.binary[row][col] == WHITE && g_img.binary[row][col+1] == BLACK) {
+                        s_tmp_right[row] = col;
+                        if (valid) L->right_edge[row] = col;
+                        break;
+                    }
+                }
+            } else {
+                int ref = (s_tmp_left[row] < 7) ? 7 : s_tmp_left[row];
+                for (int col = ref; col < IMAGE_WIDTH - 6; col++) {
+                    if (g_img.binary[row][col] != g_img.binary[row][col+1])
+                        L->jump_cnt[row]++;
+                    if (g_img.binary[row][col-6]==WHITE && g_img.binary[row][col-5]==WHITE &&
+                        g_img.binary[row][col-4]==WHITE && g_img.binary[row][col-3]==WHITE &&
+                        g_img.binary[row][col-2]==WHITE && g_img.binary[row][col-1]==WHITE &&
+                        g_img.binary[row][col  ]==WHITE && g_img.binary[row][col+1]==BLACK &&
+                        g_img.binary[row][col+2]==BLACK && g_img.binary[row][col+3]==BLACK &&
+                        g_img.binary[row][col+4]==BLACK && g_img.binary[row][col+5]==BLACK)
                     {
-                        //°ë¿í²¹Ïß
-                        //middle_line[a] = left_edge[a] - road_width[a] / 2;
-                        //Ğ±ÂÊ²¹Ïß
-                        //middle_line[a] = middle_line[a + 1] + (left_edge[a] - left_edge[a + 1]);
-                        middle_line[a] = middle_line_keep[a];
+                        s_tmp_right[row] = col;
+                        if (valid) L->right_edge[row] = col;
+                        break;
                     }
-
                 }
             }
         }
-        if (circle_exit_detect == 1)
-        {
-            for (int row = get_last_line(); row < IMAGE_HEIGHT - 1; row++)
-            {
-                if (right_edge[row] - right_edge[row + 1] < -3)
-                {
-                    break_point[0] = row;
-                    break_point[1] = left_edge[row];
-                    break;
-                }
+        int finish_cnt = 0;
+        int start_row  = (g_img.lookahead_row > 30) ? g_img.lookahead_row : 30;
+        for (int i = start_row; i < IMAGE_HEIGHT - 1; i++) {
+            if (L->jump_cnt[i] > 9) {
+                finish_cnt++;
+                g_img.finish_line_row = i;
             }
         }
-        if (circle_exit_process == 1)
-        {
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                middle_line[row] = left_edge[row] + road_width[row] / 2;
-                right_edge[row] = left_edge[row] + road_width[row];
-            }
+        if (finish_cnt >= 3 || valid)
+            is_barn = 1;
+    }
+
+    return is_barn;
+}
+
+/* ================================================================
+ * åˆ†å‰å£æ£€æµ‹
+ * ================================================================ */
+int image_search_fork(void)
+{
+    LaneLines *L = &g_img.lanes;
+    if (g_img.loss.both_cnt != 0 &&
+        (g_img.loss.left_cnt > 30 || g_img.loss.right_cnt > 30))
+        return 0;
+
+    int lpt = 0, rpt = 0, fl = 0, fr = 0;
+    for (int i = IMAGE_HEIGHT - 10; i > g_img.lookahead_row; i--) {
+        if (L->left_edge[i] < L->left_edge[i+1] && L->left_edge[i] > 5) {
+            lpt++;
+            if (lpt == 1) fl = i;
+        } else { lpt = 0; }
+
+        if (L->right_edge[i] > L->right_edge[i+1] && L->right_edge[i] <= IMAGE_WIDTH - 5) {
+            rpt++;
+            if (rpt == 1) fr = i;
+        } else { rpt = 0; }
+
+        if (lpt == 4) break;
+    }
+    for (int i = IMAGE_HEIGHT - 10; i > g_img.lookahead_row; i--) {
+        if (L->right_edge[i] > L->right_edge[i+1] && L->right_edge[i] <= IMAGE_WIDTH - 5) {
+            rpt++;
+            if (rpt == 1) fr = i;
+        } else { rpt = 0; }
+        if (rpt == 4) break;
+    }
+
+    if (lpt < 4 || rpt < 4 || abs(fr - fl) > 8) return 0;
+    return 1;
+}
+
+/* ================================================================
+ * åœæ­¢çº¿æ£€æµ‹
+ * ================================================================ */
+int image_search_stopline(void)
+{
+    /* ç®€åŒ–ï¼šæ£€æµ‹åº•è¡Œé»‘è‰²åƒç´ å æ¯” */
+    int black = 0;
+    for (int i = 0; i < IMAGE_WIDTH; i++)
+        if (g_img.binary[IMAGE_HEIGHT - 1][i] == BLACK) black++;
+    return (black > IMAGE_WIDTH * 3 / 4) ? 1 : 0;
+}
+
+/* ================================================================
+ * åˆ—å…¨é»‘æ‰«æï¼ˆå‡ºç¯è¾…åŠ©ï¼‰
+ * ================================================================ */
+int image_col_scan_all_black(int start_row)
+{
+    int cnt = 0;
+    for (int i = 0; i < IMAGE_WIDTH; i++) {
+        int j;
+        for (j = start_row; j < IMAGE_HEIGHT; j++) {
+            if (g_img.binary[j][i] == WHITE) break;
         }
+        if (j == IMAGE_HEIGHT) cnt++;
+    }
+    return cnt;
+}
+
+/* ================================================================
+ * å‡ºç¯åˆ¤æ–­ï¼ˆåº•è¡Œå…¨é»‘åƒç´  > 75ï¼‰
+ * ================================================================ */
+int image_circle_exit_judge(void)
+{
+    int cnt = 0;
+    for (int i = 0; i < IMAGE_WIDTH; i++)
+        if (g_img.binary[IMAGE_HEIGHT - 1][i] == BLACK) cnt++;
+    return (cnt > 75) ? 1 : 0;
+}
+
+/* ================================================================
+ * æ›²ç‡è®¡ç®—
+ * ================================================================ */
+static void calc_curvity(void)
+{
+    float temp = 0.0f;
+    for (int i = IMAGE_HEIGHT - 10; i > g_img.lookahead_row + 1; i--)
+        temp += IMG_MID(i-1) - IMG_MID(i);
+
+    if (g_img.available_rows > 2) {
+        temp /= g_img.available_rows;
+        temp  = (temp >  1.5f) ?  1.5f : temp;
+        temp  = (temp < -1.5f) ? -1.5f : temp;
+        g_img.curvity = temp;
+    } else {
+        g_img.curvity = 1.0f;
     }
 }
 
-
-int is_cross = 0;
-void search_cross(void)
+/* ================================================================
+ * ä¸­çº¿æ–¹å·®è®¡ç®—
+ * ================================================================ */
+static void calc_variance(void)
 {
-    int left_break_point = 0;
-    int right_break_point = 0;
-    is_cross = 0;
-    for (int row = get_last_line() + 1; row < IMAGE_HEIGHT - 10; row++)
-    {
-        if (left_edge[row] - left_edge[row + 1] > 4)
-        {
-            left_break_point = row;
-        }
-        if (right_edge[row] - right_edge[row + 1] < -4)
-        {
-            right_break_point = row;
-        }
-        if (fabs(right_break_point - left_break_point) < 3 && left_break_point != 0 && right_break_point != 0)
-        {
-            is_cross = 1;
-            for (int row = IMAGE_HEIGHT - 1; row > get_last_line(); row--)
-            {
-                right_edge[row] = 40 + road_width[row]/2;
-                left_edge[row] = 40 - road_width[row]/2;
-                middle_line[row] = (left_edge[row] + right_edge[row]) / 2;
-            }
-
-        }
+    float sum = 0.0f;
+    for (int i = IMAGE_HEIGHT - 1; i > g_img.lookahead_row; i--) {
+        float d = IMG_MID(i) - MID_LINE_VAL;
+        sum += d * d;
     }
+    g_img.variance = (g_img.lookahead_row < 50)
+                    ? (sum / (IMAGE_HEIGHT - g_img.lookahead_row - 1))
+                    : 1000.0f;
 }
 
-int road_width_recover_cnt = 0;
-int left_edge_recover_cnt = 0;
-int right_edge_recover_cnt = 0;
-Inflexion left_inflexion;
-Inflexion right_inflexion;
-
-void search_break(int start, int end)
+/* ================================================================
+ * æ¨¡ç³ŠåŠ æƒåå·®è®¡ç®—ï¼ˆä¸»è¦æ§åˆ¶é‡ï¼‰
+ * ================================================================ */
+static float fuzzify_left (float x, float x0, float x1)
 {
-    road_width_recover_cnt = 0;
-    left_edge_recover_cnt = 0;
-    right_edge_recover_cnt = 0;
-
-    //Ñ°ÕÒ¿í¶ÈÍ»±äÓë±ß½çÍ»±ä
-    for (int row = start; row > end + 1; row--)
-    {
-        if (right_edge[row] - left_edge[row] > right_edge[row + 1] - left_edge[row + 1] + 5 ||
-            (road_width_break_cnt > 0 && right_edge[row] - left_edge[row] >
-                                         right_edge[road_width_break_point] - left_edge[road_width_break_point] + 5))
-        {
-            if (road_width_break_cnt == 0)
-            {
-                road_width_break_point = row + 1;
-                road_width_break_cnt++;
-            }
-            else
-                road_width_break_cnt++;
-        }
-        else if (road_width_break_cnt > 0 && right_edge[row] - left_edge[row] < right_edge[road_width_break_point])
-        {
-            road_width_recover_cnt++;
-        }
-
-        if (left_edge[row] - left_edge[row + 1] < -5 ||
-            (left_edge_break_cnt > 0 && left_edge[row] - left_edge[left_edge_break_point] < 0))
-        {
-            if (left_edge_break_cnt == 0)
-            {
-                left_edge_break_point = row + 1;
-                left_edge_break_cnt++;
-            }
-            else
-                left_edge_break_cnt++;
-        }
-        else if (left_edge_break_cnt > 0 && left_edge[row] - left_edge[left_edge_break_point] > 0)
-        {
-            left_edge_recover_cnt++;
-        }
-
-        if (right_edge[row] - right_edge[row + 1] > 5 ||
-            (right_edge_break_cnt > 0 && right_edge[row] - right_edge[right_edge_break_point] > 0))
-        {
-            if (right_edge_break_cnt == 0)
-            {
-                right_edge_break_point = row + 1;
-                right_edge_break_cnt++;
-            }
-            else
-                right_edge_break_cnt++;
-        }
-        else if (right_edge_break_cnt > 0 && right_edge[row] - right_edge[right_edge_break_point] < 0)
-        {
-            right_edge_recover_cnt++;
-        }
-    }
-
-    for (int i = start - 1; i > end + 1; i--)
-    {
-        //Í¨¹ı¼«ÖµµãÀ´Çó½â
-        if (left_edge[i] - left_edge[i + 1] >= -1 && left_edge[i] - left_edge[i + 1] <= 2 &&
-            left_edge[i - 1] - left_edge[i] <= -12)
-        {
-            left_inflexion.flag = 1;
-            left_inflexion.row = i;
-            left_inflexion.col = left_edge[i];
-        }
-        if (right_edge[i] - right_edge[i + 1] <= 1 && right_edge[i] - right_edge[i + 1] >= -2 &&
-            right_edge[i - 1] - right_edge[i] >= 12)
-        {
-            right_inflexion.flag = 1;
-            right_inflexion.row = i;
-            right_inflexion.col = right_edge[i];
-        }
-//         printf("s:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n\r",
-//                left_inflexion.row, left_inflexion.col, right_inflexion.row, right_inflexion.col,
-//                 road_width_break_cnt, road_width_break_point, road_width_recover_cnt, left_edge_break_cnt,
-//                 left_edge_break_point, left_edge_recover_cnt,
-//                 right_edge_break_cnt, right_edge_break_point, right_edge_recover_cnt);
-    }
-//    printf("s:%d,%d,%d,%d\n\r",left_inflexion.row, left_inflexion.col, right_inflexion.row, right_inflexion.col);
-//     printf("road:%d,%d,%d,\r\n right: %d,%d,%d,\r\n left:%d,%d,%d\r\n", road_width_break_point, road_width_break_cnt, road_width_recover_cnt,
-//                                                  right_edge_break_point, right_edge_break_cnt, right_edge_recover_cnt,
-//                                                  left_edge_break_point, left_edge_break_cnt, left_edge_recover_cnt);
+    if (x <= x0) return 1.0f;
+    if (x > x1)  return 0.0f;
+    return (x1 - x) / (x1 - x0);
 }
 
-void search_jump_point(int start, int end)
+static float fuzzify_mid(float x, float x0, float xm, float x1)
 {
-    /*for(int i = start; i < end; i++) {
-            jump_point_num[i] = 0;
-            for(int j = left_edge[i]; j < right_edge[i]; j++) {
-                    if(binary_image[i][j] - binary_image[i][j + 1] != 0) {
-                            jump_point_num[i]++;
-                    }
-            }
-            printf("%d:%d\n\r", i, jump_point_num[i]);
-    }*/
-    for (int i = start; i < end; i++)
-    {
-        jump_point_num[i] = 0;
-        for (int j = 15; j < 65; j++)
-        {
-            if (binary_image[i][j] - binary_image[i][j + 1] != 0)
-                jump_point_num[i]++;
-        }
-        //printf("%d:%d\n\r", i, jump_point_num[i]);
-    }
+    if (x <= x0 || x > x1) return 0.0f;
+    if (x <= xm) return (x - x0) / (xm - x0);
+    return (x1 - x) / (x1 - xm);
 }
 
-void Regression(int x[], int y[], int start, int end, float *k, float *b)
+static float fuzzify_right(float x, float x0, float x1)
 {
+    if (x <= x0) return 0.0f;
+    if (x >= x1) return 1.0f;
+    return (x - x0) / (x1 - x0);
+}
+
+static void get_fuzzy_weights(float speed, float w[WEIGHT_DIM])
+{
+    w[0] = fuzzify_left (speed, 0.5f, 1.0f);
+    w[1] = fuzzify_mid  (speed, 0.5f, 1.0f, 1.5f);
+    w[2] = fuzzify_mid  (speed, 1.0f, 1.5f, 2.0f);
+    w[3] = fuzzify_right(speed, 1.5f, 2.0f);
+}
+
+static void calc_weighted_error(void)
+{
+    float w[WEIGHT_DIM] = {0};
+    float result[WEIGHT_DIM] = {0};
+    float wsum[WEIGHT_DIM]   = {0};
+
+    get_fuzzy_weights(filter_speed, w);
+
+    for (int n = 0; n < WEIGHT_DIM; n++) {
+        for (int i = IMAGE_HEIGHT - 1; i > g_img.lookahead_row; i--) {
+            result[n] += g_row_weight[n][i] * IMG_MID(i);
+            wsum[n]   += g_row_weight[n][i];
+        }
+        result[n] = (wsum[n] != 0.0f) ? (result[n] / wsum[n]) : MID_LINE_VAL;
+    }
+
+    float mid_val = 0.0f;
+    for (int n = 0; n < WEIGHT_DIM; n++)
+        mid_val += w[n] * result[n];
+
+    g_img.image_error = mid_val - MID_LINE_VAL;
+}
+
+/* ================================================================
+ * çº¿æ€§å›å½’ï¼ˆç”¨äºè¾¹ç•Œæ–¹å·®è¾…åŠ©ï¼‰
+ * ================================================================ */
+static void linear_regression(int x[], int y[], int start, int end, float *k, float *b)
+{
+    if (end <= start) return;
     float t1 = 0, t2 = 0, t3 = 0, t4 = 0;
-    if (end <= start)
-        return;
-    int size = end - start;
-    for (uint8 i = start; i < end; i++)
-    {
-        t1 += x[i] * x[i];
+    int   sz = end - start;
+    for (int i = start; i < end; i++) {
+        t1 += (float)x[i] * x[i];
         t2 += x[i];
-        t3 += x[i] * y[i];
+        t3 += (float)x[i] * y[i];
         t4 += y[i];
     }
-    *k = (t3 * size - t2 * t4) / (t1 * size - t2 * t2);
-    *b = (t1 * t4 - t2 * t3) / (t1 * size - t2 * t2);
+    float denom = t1 * sz - t2 * t2;
+    if (denom == 0.0f) return;
+    *k = (t3 * sz - t2 * t4) / denom;
+    *b = (t1 * t4 - t2 * t3) / denom;
 }
 
-float getVarianceOfEdge(int Edges[], int lastLine)
+static float edge_variance_from_regression(int edges[], int last_line)
 {
-
-    float variance = 0.0f;
-    int indexs[IMAGE_HEIGHT] = {0};
-    for (int i = 0; i < IMAGE_HEIGHT; i++)
-    {
-        indexs[i] = i;
-    }
-    float k = 0.0f;
-    float b = 0.0f;
+    int idx[IMAGE_HEIGHT];
+    for (int i = 0; i < IMAGE_HEIGHT; i++) idx[i] = i;
 
     int end = IMAGE_HEIGHT;
-
-    int tmp = Edges[IMAGE_HEIGHT - 1];
-    for (int i = IMAGE_HEIGHT - 1; i > lastLine; i--)
-    {
-        if (Edges[i] != tmp)
-        {
-            end = i;
-        }
+    int tmp = edges[IMAGE_HEIGHT - 1];
+    for (int i = IMAGE_HEIGHT - 1; i > last_line; i--) {
+        if (edges[i] != tmp) { end = i; break; }
     }
 
-    Regression(indexs, Edges, lastLine + 1, end, &k, &b);
+    float k = 0.0f, b = 0.0f;
+    linear_regression(idx, edges, last_line + 1, end, &k, &b);
 
     float sum = 0.0f;
-
-    for (int i = lastLine + 1; i < IMAGE_HEIGHT; i++)
-    {
-        sum += (Edges[i] - (k * i + b)) * (Edges[i] - (k * i + b));
+    for (int i = last_line + 1; i < IMAGE_HEIGHT; i++) {
+        float d = edges[i] - (k * i + b);
+        sum += d * d;
     }
-
-    variance = sum / (IMAGE_HEIGHT - lastLine - 1);
-
-    //printf();
-
-    return variance;
+    return sum / (IMAGE_HEIGHT - last_line - 1);
 }
 
-void calc_middle_line_curvity(void)//¼ÆËãÖĞÏßÇúÂÊ
+/* ================================================================
+ * å¯è§†åŒ–å åŠ ï¼ˆè°ƒè¯•ç”¨ï¼Œå°†ä¸­çº¿/è¾¹ç•Œæ ‡è®°åˆ° binary å›¾ï¼‰
+ * ================================================================ */
+void image_draw_overlay(void)
 {
-    float temp = 0;
-    for (int i = IMAGE_HEIGHT - 10; i > get_last_line() + 1; i--)
-    {
-        temp += middle_line[i - 1] - middle_line[i];
-    }
-    if (get_available_line() > 2)
-    {
-        temp = temp / get_available_line();
-        temp = temp > 1.5f ? 1.5f : temp;
-        temp = temp < -1.5f ? -1.5f : temp;
-        set_curvity(temp);
-    }
-    else
-    {
-        set_curvity(1);
+    LaneLines *L = &g_img.lanes;
+    int ll = g_img.lookahead_row;
+
+    for (int i = IMAGE_HEIGHT - 1; i > ll; i--) {
+        int m  = L->mid_line[i];
+        int lf = L->left_edge[i]  + 2;
+        int rf = L->right_edge[i] - 2;
+
+        m  = CLAMP(m,  1, IMAGE_WIDTH - 2);
+        lf = CLAMP(lf, 1, IMAGE_WIDTH - 2);
+        rf = CLAMP(rf, 1, IMAGE_WIDTH - 2);
+
+        g_img.binary[i][m]  = BLACK;
+        g_img.binary[i][lf] = BLACK;
+        g_img.binary[i][rf] = BLACK;
     }
 
+    /* åœ¨è¯¯å·®ä½ç½®ç”»3Ã—3å°æ–¹å— */
+    int mc = (int)g_img.image_error + MID_LINE_VAL;
+    mc = (mc < 1) ? 1 : (mc > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : mc);
+    for (int r = 40; r <= 42; r++)
+        for (int c = mc - 1; c <= mc + 1; c++)
+            g_img.binary[r][c] = BLACK;
+
+    /* å‰ç»è¡Œç”»æ¨ªçº¿ */
+    memset(g_img.binary[ll], BLACK, IMAGE_WIDTH);
 }
 
-float variance = 0.0f;
-
-void set_variance(float var)
+/* ================================================================
+ * çŠ¶æ€å¤ä½ï¼ˆæ¯å¸§å¼€å§‹è°ƒç”¨ï¼‰
+ * ================================================================ */
+static void state_reset(void)
 {
-    variance = var;
-}
+    LaneLines  *L = &g_img.lanes;
+    EdgeLoss   *E = &g_img.loss;
+    BreakStats *B = &g_img.breaks;
 
-float get_variance()
-{
-    return variance;
-}
+    E->left_cnt      = 0;
+    E->right_cnt     = 0;
+    E->both_cnt      = 0;
+    E->left_start_row  = 0;
+    E->right_start_row = 0;
 
-void calc_middleline_variance() //¼ÆËã·½²î
-{
-    float var = 0.0f;
-    float var_sum = 0.0f;
+    g_img.lookahead_row  = 0;
+    g_img.available_rows = 0;
 
-    variance = 1000;
+//    g_road_width[IMAGE_HEIGHT] = IMAGE_WIDTH; /* æœ«å°¾å“¨å…µ */
 
-    for (int i = IMAGE_HEIGHT - 1; i > get_last_line(); i--)
-    {
-        var_sum += (middle_line[i] - MID_LINE_VAL) * (middle_line[i] - MID_LINE_VAL);
-    }
-    if (get_last_line() < 50)
-    {
-        var = var_sum / (IMAGE_HEIGHT - get_last_line() - 1);
-        set_variance(var);
-    }
-    else
-    {
-        set_variance(1000);
-    }
-    //printf("v:%f\n\r", variance);
-}
-
-float Fuzzify_Left(float x, float X_start, float X_end)//Ä£ºı»¯£¬Á¥Êô¶È¼ÆËã£¬ÊÊÓÃÓÚ×ó±ß
-{
-    if (x <= X_start)
-        return 1;
-    else if ((X_start < x) && (x <= X_end))
-        return (X_end - x) / (X_end - X_start);
-    else if (x > X_end)
-        return 0;
-    return 0;
-}
-
-float Fuzzify_Mid(float x, float X_start, float X_mid, float X_end)//Ä£ºı»¯£¬Á¥Êô¶È¼ÆËã£¬ÊÊÓÃÓÚÖĞ¼ä
-{
-    if (x <= X_start)
-        return 0;
-    else if ((X_start < x) && (x <= X_mid))
-        return (x - X_start) / (X_mid - X_start);
-    else if ((X_mid < x) && (x <= X_end))
-        return (X_end - x) / (X_end - X_mid);
-    else if (x > X_end)
-        return 0;
-    return 0;
-}
-
-float Fuzzify_Right(float x, float X_start, float X_end)//Ä£ºı»¯£¬Á¥Êô¶È¼ÆËã£¬ÊÊÓÃÓÚÓÒ±ß
-{
-    if (x <= X_start)
-        return 0;
-    else if ((X_start < x) && (x < X_end))
-        return (x - X_start) / (X_end - X_start);
-    else if (x >= X_end)
-        return 1;
-    return 1;
-}
-
-void GetWeightMembership(float real_speed, float w[DIMENSION])//ÇóÄ£ºıÁ¥Êô¶È,ÓÃËÙ¶È×÷ÊäÈë
-{
-#define LOWER_LIMIT 0.5f
-#define MIDDLE_LIMIT 1.0f
-#define UPPER_LIMIT 1.5f
-#define SUPER_LIMIT 2.0f
-    //real_speed ÊÇÕæÊµËÙ¶È£¬ÎÒÃÇÈÏÎª140ÒÔÏÂÊÇµÍËÙ£¬240ÊÇÖĞËÙ£¬340ÒÔÉÏÊÇ¸ßËÙ£¨¿É×ÔĞĞĞŞ¸Ä£©
-    w[0] = Fuzzify_Left(real_speed, LOWER_LIMIT, MIDDLE_LIMIT);
-    w[1] = Fuzzify_Mid(real_speed, LOWER_LIMIT, MIDDLE_LIMIT, UPPER_LIMIT);
-    w[2] = Fuzzify_Mid(real_speed, MIDDLE_LIMIT, UPPER_LIMIT, SUPER_LIMIT);
-    w[3] = Fuzzify_Right(real_speed, UPPER_LIMIT, SUPER_LIMIT);
-}
-
-void calc_image_error(void)//ÉãÏñÍ·ÄâºÏÖĞÏß
-{
-    float mid_val = 0.0f;
-    float result[DIMENSION] = {0};
-    float weight_sum[DIMENSION] = {0};
-    float w[DIMENSION] = {0};
-
-#if 1
-    GetWeightMembership(filter_speed, w);//»ñÈ¡w1 w2 w3
-#else
-    w[0] = 0.0f;
-    w[1] = 0.0f;
-    w[2] = 0.0f;
-    w[3] = 1.0f;
-#endif
-
-    for (int n = 0; n < DIMENSION; n++)
-    {
-        for (uint8 i = IMAGE_HEIGHT - 1; i > get_last_line(); i--)
-        {
-            result[n] += image_row_weight[n][i] * middle_line[i];
-            weight_sum[n] += image_row_weight[n][i];
-        }
-        if (weight_sum[n] != 0)
-        {
-            result[n] = result[n] / weight_sum[n];
-        }
-        else
-        {
-            result[n] = MID_LINE_VAL;
-        }
-        mid_val += w[n] * result[n];
-    }
-    mid_val -= MID_LINE_VAL;
-    image_error = mid_val;
-
-}
-
-void variables_init(void)
-{
-    left_lose = 0;
-    right_lose = 0;
-    all_lose = 0;
-    white_num = 0;
-    break_cnt = 0;
-
-    left_lose_start = 0;//¼ÇÂ¼×ó±ß¶ªÏßµÄ¿ªÊ¼ĞĞ
-    right_lose_start = 0;//¼ÇÂ¼ÓÒ±ß±ß¶ªÏßµÄ¿ªÊ¼ĞĞ
-    white_start = 0;//È«°×¿ªÊ¼µã
-    road_width[IMAGE_HEIGHT] = IMAGE_WIDTH;
-
-    for (int i = 0; i < IMAGE_HEIGHT + 1; i++)
-    {//¸³³õÖµ
-        left_edge[i] = 0;
-        right_edge[i] = IMAGE_WIDTH;
-        middle_line[i] = IMAGE_WIDTH / 2;
-        jump_point_num[i] = 0;
-    }
-    left_inflexion.flag = 0;
-    left_inflexion.row = 0;
-    left_inflexion.col = 0;
-    right_inflexion.flag = 0;
-    right_inflexion.row = 0;
-    right_inflexion.col = IMAGE_WIDTH;
-    road_width_break_point = 0;
-    road_width_break_cnt = 0;
-    right_edge_break_point = 0;
-    right_edge_break_cnt = 0;
-    left_edge_break_point = 0;
-    left_edge_break_cnt = 0;
-    left_inflexion.flag = 0;
-    left_inflexion.col = 0;
-    left_inflexion.row = 0;
-    right_inflexion.flag = 0;
-    right_inflexion.col = 0;
-    right_inflexion.row = 0;
-}
-
-unsigned char composite_image[IMAGE_HEIGHT][IMAGE_WIDTH];
-
-void complex_image(void)
-{
-#if 0
-    for(int i = 0; i < IMAGE_HEIGHT; i++)
-            for(int j = 0; j < IMAGE_WIDTH; j++)
-                    composite_image[i][j] = 0xff;
-
-    for(int i = IMAGE_HEIGHT - 1; i > get_last_line(); i--)
-    {
-            int mid_line = middle_line[i];
-            mid_line = mid_line > IMAGE_WIDTH - 1 ? IMAGE_WIDTH - 1 : mid_line;
-            mid_line = mid_line < 0 ? 0 : mid_line;
-            //composite_image[i][mid_line] = 0;
-
-            int left_line = left_edge[i];
-            left_line = left_line > IMAGE_WIDTH - 1 ? IMAGE_WIDTH - 1 : left_line;
-            left_line = left_line < 0 ? 0 : left_line;
-            composite_image[i][left_line] = 0;
-
-            int right_line = right_edge[i];
-            right_line = right_line > IMAGE_WIDTH - 1 ? IMAGE_WIDTH - 1 : right_line;
-            right_line = right_line < 0 ? 0 : right_line;
-            composite_image[i][right_line] = 0;
-    }
-    float camera_midline = get_image_middle_line();
-    float error = camera_midline - MID_LINE_VAL;
-    int last_line = get_last_line();
-    int available_line = get_available_line();
-    int mid_line = (int)get_image_middle_line();
-    mid_line = mid_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : mid_line;
-    mid_line = mid_line < 1 ? 1 : mid_line;
-    /*composite_image[50][mid_line - 1] = 0;composite_image[50][mid_line] = 0;composite_image[50][mid_line + 1] = 0;
-    composite_image[51][mid_line - 1] = 0;composite_image[51][mid_line] = 0;composite_image[51][mid_line + 1] = 0;
-    composite_image[52][mid_line - 1] = 0;composite_image[52][mid_line] = 0;composite_image[52][mid_line + 1] = 0;*/
-    for(int i = 0; i < IMAGE_WIDTH; i++)
-    {
-            for(int j = 0; j <= last_line; j++)
-            composite_image[j][i] = 0;
-    }
-#else
-    for (int i = IMAGE_HEIGHT - 1; i > get_last_line(); i--)
-    {
-        int mid_line = middle_line[i];
-        mid_line = mid_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : mid_line;
-        mid_line = mid_line < 1 ? 1 : mid_line;
-        binary_image[i][mid_line] = 0;
-
-        int left_line = left_edge[i] + 2;
-        left_line = left_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : left_line;
-        left_line = left_line < 1 ? 1 : left_line;
-        binary_image[i][left_line] = 0;
-
-        int right_line = right_edge[i] - 2;
-        right_line = right_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : right_line;
-        right_line = right_line < 1 ? 1 : right_line;
-        binary_image[i][right_line] = 0;
-    }
-//    float camera_midline = get_image_middle_line() + IMAGE_WIDTH / 2;
-//    float error = camera_midline - MID_LINE_VAL;
-    int last_line = get_last_line();
-//    int available_line = get_available_line();
-    int mid_line = (int) get_image_middle_line();
-    mid_line = mid_line > IMAGE_WIDTH - 2 ? IMAGE_WIDTH - 2 : mid_line;
-    mid_line = mid_line < 1 ? 1 : mid_line;
-    binary_image[40][mid_line - 1] = 0;
-    binary_image[40][mid_line] = 0;
-    binary_image[40][mid_line + 1] = 0;
-    binary_image[41][mid_line - 1] = 0;
-    binary_image[41][mid_line] = 0;
-    binary_image[41][mid_line + 1] = 0;
-    binary_image[42][mid_line - 1] = 0;
-    binary_image[42][mid_line] = 0;
-    binary_image[42][mid_line + 1] = 0;
-    for (int i = 0; i < IMAGE_WIDTH; i++)
-    {
-        binary_image[last_line][i] = 0;
+    for (int i = 0; i <= IMAGE_HEIGHT; i++) {
+        L->left_edge[i]  = 0;
+        L->right_edge[i] = IMAGE_WIDTH;
+        L->mid_line[i]   = IMAGE_WIDTH / 2;
+        L->jump_cnt[i]   = 0;
     }
 
+    B->road_width_break_row = 0; B->road_width_break_cnt = 0;
+    B->left_break_row       = 0; B->left_break_cnt       = 0;
+    B->right_break_row      = 0; B->right_break_cnt      = 0;
 
-#endif
-}
-
-void calculate_road_width()
-{
-//        static int flag = 0;
-    //if(flag++ != 100)
-    //{
-    //  return;
-    //}
-    printf("road_width:\n\r");
-    for (int i = 0; i < IMAGE_HEIGHT; i++)
-    {
-        if (i % 10 == 0)
-        {
-            printf("\n\rrow:%d:", i / 10);
-        }
-        printf("%d, ", right_edge[i] - left_edge[i]);
-    }
-    printf("end:\n\r");
-}
-
-int _right_edge[IMAGE_HEIGHT];
-int _left_edge[IMAGE_HEIGHT];
-int barn_break_point = 0;
-int barn_exist_flag = 0;
-int finish_line_row = 0;
-
-int search_barn(int dir, int valid)
-{
-        barn_break_point = 0;
-        int is_barn = 0;
-        if(0 == dir)//×ó±ßÈë¿â
-        {
-                //Ñ°ÓÒ±ß½ç
-                for(int row = IMAGE_HEIGHT - 1; row > 18; row--)
-                {
-                        _right_edge[row] = IMAGE_WIDTH - 1;
-                        if(valid)
-                                right_edge[row] = IMAGE_WIDTH - 1;
-                        if(IMAGE_HEIGHT - 1 == row)
-                        {
-                                for(int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                                        {
-                                                _right_edge[row] = col;
-                                                if(valid)
-                                                        right_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                        else
-                        {
-                                for(int col = (_right_edge[row + 1] + 5 > IMAGE_WIDTH - 2 ? (_right_edge[row + 1] + 5) : (IMAGE_WIDTH - 2)); col > (_right_edge[row + 1] - 8 > 0 ? (_right_edge[row + 1] - 8) : 0); col--)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                                        {
-                                            _right_edge[row] = col;
-                                            if(valid)
-                                                        right_edge[row] = col;
-                                            break;
-                                        }
-                                }
-                        }
-                }
-                //Ñ°×ó±ß½ç
-                for(int row = IMAGE_HEIGHT - 1; row > 18; row--)
-                {
-                        _left_edge[row] = 0;
-                        if(valid)
-                            left_edge[row] = 0;
-                        jump_point_num[row] = 0;
-                        if(IMAGE_HEIGHT - 1 == row)
-                        {
-                                for(int col = IMAGE_WIDTH / 2; col > 0; col--)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                                        {
-                                                _left_edge[row] = col;
-                                                if(valid)
-                                                        left_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                        else
-                        {
-                          for(int col = (_right_edge[row] > IMAGE_WIDTH - 8 ? (IMAGE_WIDTH - 8) : _right_edge[row]); col > 5; col--)
-                                {
-                                        if(binary_image[row][col] != binary_image[row][col - 1])
-                                                jump_point_num[row]++;
-                                        if(WHITE == binary_image[row][col + 6] && WHITE == binary_image[row][col + 5] && WHITE == binary_image[row][col + 4]
-                                           && WHITE == binary_image[row][col + 3] && WHITE == binary_image[row][col + 2]
-                                           && WHITE == binary_image[row][col + 1] && WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1]
-                                             && BLACK == binary_image[row][col - 2] && BLACK == binary_image[row][col - 3] && BLACK == binary_image[row][col - 4]
-                                               && BLACK == binary_image[row][col - 5])
-                                        {
-                                                _left_edge[row] = col;
-                                                if(valid)
-                                                        left_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                }
-                int finish_line = 0;
-                finish_line_row = 0;
-                for(int i = (get_last_line() > 30 ? get_last_line() : 30); i < IMAGE_HEIGHT - 1; i++)
-                {
-                       // printf("%d:%d\n\r", i, jump_point_num[i]);
-                        if(jump_point_num[i] > 9)
-                        {
-                                finish_line++;
-                                finish_line_row = i;
-//                                printf("%d:%d\n\r", i, jump_point_num[i]);
-                        }
-                }
-                if(finish_line >= 3 || valid)
-                {
-                        is_barn = 1;
-                        //ÕÒ×ó±ß½çÍ»±äµã
-                        /*
-                        for(int i = 27; i < IMAGE_HEIGHT - 1; i++)
-                        {
-                                //printf("%d:%d\n\r", i, _right_edge[i]);
-                                if(_left_edge[i] - _left_edge[i + 1] > 6)
-                                {
-                                        if(valid)
-                                            set_last_line(i);
-                                        barn_break_point = i;
-                                        break;
-                                }
-                        }
-
-                        if(break_point != 0 && valid)
-                        {
-                                int modify_point = barn_break_point + 40;
-                                if(modify_point > IMAGE_HEIGHT - 1)
-                                        modify_point = IMAGE_HEIGHT - 1;
-                                float k = (float)(80 - (left_edge[barn_break_point])) / (modify_point - barn_break_point);
-                                //ĞŞ²¹Í»±äµãÏÂ·½µÄ×ó±ß½ç
-                                for(int i = barn_break_point; i <= modify_point; i++)
-                                {
-                                        right_edge[i] = left_edge[barn_break_point] + k * (i - barn_break_point);
-                                }
-                                middle_line[IMAGE_HEIGHT - 1] = 40;
-                                if(barn_break_point < 31)
-                                {
-                                        for(int i = IMAGE_HEIGHT - 2; i > barn_break_point; i--)
-                                        {
-                                                if(left_edge[i] == 0)
-                                                        middle_line[i] = middle_line[i + 1] + (right_edge[i] - right_edge[i + 1]);
-                                                else
-                                                        middle_line[i] = (right_edge[i] + left_edge[i]) / 2;
-                                        }
-                                }
-                                else if(barn_break_point >= 31 && barn_break_point <= 42)
-                                {
-                                        for(int i = IMAGE_HEIGHT - 2; i > barn_break_point; i--)
-                                        {
-                                                middle_line[i] = middle_line[i + 1] + (right_edge[i] - right_edge[i + 1]);
-                                        }
-                                }
-                                else
-                                {
-                                        for(int i = IMAGE_HEIGHT - 2; i > barn_break_point; i--)
-                                        {
-                                                middle_line[i] = 0;
-                                        }
-                                }
-
-                        }*/
-                }
-
-        }
-        else if(1 == dir)
-        {
-                //Ñ°×ó±ß½ç
-                for(int row = IMAGE_HEIGHT - 1; row > 18; row--)
-                {
-                        _left_edge[row] = 0;
-                        if(valid)
-                                left_edge[row] = 0;
-                        if(IMAGE_HEIGHT - 1 == row)
-                        {
-                                for(int col = IMAGE_WIDTH / 2; col > 0; col--)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                                        {
-                                                _left_edge[row] = col;
-                                                if(valid)
-                                                        left_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                        else
-                        {
-                                for(int col = (_left_edge[row + 1] - 5 > 1 ? (_left_edge[row + 1] - 5) : 1); col < (_left_edge[row + 1] + 5 < IMAGE_WIDTH - 1 ? (_left_edge[row + 1] + 8) : (IMAGE_WIDTH - 1)); col++)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col - 1])
-                                        {
-                                                _left_edge[row] = col;
-                                                if(valid)
-                                                        left_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                }
-                //Ñ°ÓÒ±ß½ç
-                for(int row = IMAGE_HEIGHT - 1; row > 18; row--)
-                {
-                        _right_edge[row] = IMAGE_WIDTH - 1;
-                        if(valid)
-                          right_edge[row] = IMAGE_WIDTH - 1;
-                        jump_point_num[row] = 0;
-                        if(IMAGE_HEIGHT - 10 == row)
-                        {
-                                for(int col = IMAGE_WIDTH / 2; col < IMAGE_WIDTH - 1; col++)
-                                {
-                                        if(WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1])
-                                        {
-                                                _right_edge[row] = col;
-                                                if(valid)
-                                                        right_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                        else
-                        {
-                                for(int col = _left_edge[row] < 7 ? 7 : _left_edge[row]; col < IMAGE_WIDTH - 6; col++)
-                                {
-                                        if(binary_image[row][col] != binary_image[row][col + 1])
-                                                jump_point_num[row]++;
-                                        if(WHITE == binary_image[row][col - 6] && WHITE == binary_image[row][col - 5] && WHITE == binary_image[row][col - 4]
-                                           && WHITE == binary_image[row][col - 3] && WHITE == binary_image[row][col - 2]
-                                           && WHITE == binary_image[row][col - 1] && WHITE == binary_image[row][col] && BLACK == binary_image[row][col + 1]
-                                             && BLACK == binary_image[row][col + 2] && BLACK == binary_image[row][col + 3] && BLACK == binary_image[row][col + 4]
-                                               && BLACK == binary_image[row][col + 5])
-                                        {
-                                                _right_edge[row] = col;
-                                                if(valid)
-                                                        right_edge[row] = col;
-                                                break;
-                                        }
-                                }
-                        }
-                }
-                int finish_line = 0;
-                finish_line_row = 0;
-                for(int i = (get_last_line() > 30 ? get_last_line() : 30); i < IMAGE_HEIGHT - 1; i++)
-                {
-                        //printf("%d:%d\n\r", i, jump_point_num[i]);
-                        if(jump_point_num[i] > 9)
-                        {
-                                finish_line++;
-                                finish_line_row = i;
-                        }
-                }
-                if(finish_line >= 3 || valid)
-                {
-                        is_barn = 1;
-                        //ÕÒÓÒ±ß½çÍ»±äµã
-                        /*
-                        for(int i = 27; i < IMAGE_HEIGHT - 1; i++)
-                        {
-                                //printf("%d:%d\n\r", i, _right_edge[i]);
-                                if(_right_edge[i] - _right_edge[i + 1] < -6)
-                                {
-                                if(valid)
-                                    set_last_line(0);
-                                        barn_break_point = i;
-                                        //printf("%d\n\r", barn_break_point);
-                                        break;
-                                }
-                        }
-                        if(barn_break_point > 20 && barn_break_point < 50 && valid)
-                        {
-                                int modify_point = barn_break_point + 40;
-                                if(modify_point > IMAGE_HEIGHT - 1)
-                                        modify_point = IMAGE_HEIGHT - 1;
-                                float k = (float)(0 - (right_edge[barn_break_point])) / (modify_point - barn_break_point);
-                                //ĞŞ²¹Í»±äµãÏÂ·½µÄ×ó±ß½ç
-                                for(int i = barn_break_point; i <= modify_point; i++)
-                                {
-                                        left_edge[i] = right_edge[barn_break_point] + k * (i - barn_break_point);
-                                }
-                                middle_line[IMAGE_HEIGHT - 1] = 40;
-                                 if(barn_break_point <= 42)
-                                {
-                                        for(int i = IMAGE_HEIGHT - 2; i > barn_break_point; i--)
-                                        {
-                                                middle_line[i] = middle_line[i + 1] + (left_edge[i] - left_edge[i + 1]);
-                                        }
-                                }
-                                else
-                                {
-                                        for(int i = IMAGE_HEIGHT - 2; i > barn_break_point; i--)
-                                        {
-                                                middle_line[i] = 80;
-                                        }
-                                }
-                        }*/
-                }
-        }
-        return is_barn;
-}
-
-// FORK ¼ì²â¿ªÊ¼
-#define max(a, b) a>b?a:b
-int l_point_row = 0, r_point_row = 0;
-int first_l_point, first_r_point;
-float last_fork_end = 0;
-
-int search_fork(void)
-{
-    if (all_lose != 0 && max(left_lose, right_lose) > 30)
-        return 0;
-
-    l_point_row = 0, r_point_row = 0;
-    for (int i = IMAGE_HEIGHT - 10; i > get_last_line(); i--)
-    {
-        if (left_edge[i] < left_edge[i + 1] && left_edge[i] > 5)
-        {
-            l_point_row++;
-            if (l_point_row == 1)
-                first_l_point = i;
-        }
-        else
-        {
-            l_point_row = 0;
-        }
-        if (l_point_row == 4)
-            break;
-    }
-
-    for (int i = IMAGE_HEIGHT - 10; i > get_last_line(); i--)
-    {
-        if (right_edge[i] > right_edge[i + 1] && right_edge[i] <= IMAGE_WIDTH - 5)
-        {
-            r_point_row++;
-            if (r_point_row == 1)
-                first_r_point = i;
-        }
-        else
-        {
-            r_point_row = 0;
-        }
-        if (r_point_row == 4)
-            break;
-    }
-
-    if (l_point_row < 4 || r_point_row < 4 || abs(first_r_point - first_l_point) > 8)
-        return 0;
-
-    return 1;
-}
-
-/*****************************°ßÂíÏß¶¨Òå*************************************/
-int line = 0;//×İ×ø±ê
-int list = 0;//ºá×ø±ê
-
-int count_black;
-int count_black_1;
-int garage_count;
-int white_black;
-int black_white;
-int region;
-int garageout_flag = 0;
-int js = 0;
-
-void test_black()//ºÚÉ«¼ÆÊı
-{
-    int i, j;
-    count_black = 0;//×ó±ßºÚÉ«Êı
-    count_black_1 = 0;
-    for (i = IMAGE_WIDTH / 2; i > 5; i--)//´ÓÖĞ¼äÍù×óÊıºÚÉ«Êı
-    {
-        if (binary_image[35][i] == BLACK)//¾ßÌåÉ¨ÃèĞĞÊı×Ô¼ºµ÷Õû
-        {
-            count_black++;
-        }
-    }
-    for (j = IMAGE_WIDTH / 2; j < IMAGE_WIDTH - 5; j++)//´ÓÖĞ¼äÍùÓÒÊıºÚÉ«Êı
-    {
-        if (binary_image[35][j] == BLACK)//¾ßÌåÉ¨ÃèĞĞÊı×Ô¼ºµ÷Õû
-        {
-            count_black_1++;//ÓÒ±ßºÚÉ«Êı
-        }
-    }
-}
-
-/*****************************±ÜÕÏ¶¨Òå*************************************/
-int l_diu = 0;
-int r_diu = 0;
-
-int block_in_process = 0;
-int count_black_1;
-int count_black;
-int bzline = 0;
-int bz_start = 30;
-int zhidao_signal = 0;
-int count_white;
-int Road_Width[3];
-
-int search_block(void)//±ÜÕÏ
-{
-    Road_Width[0] = abs(right_edge[bz_start - 10] - left_edge[bz_start - 10]);//µÀÂ·¿í¶ÈÉ¨Ãè
-    Road_Width[1] = abs(right_edge[bz_start] - left_edge[bz_start]);//µÀÂ·¿í¶ÈÉ¨Ãè
-    Road_Width[2] = abs(right_edge[bz_start + 10] - left_edge[bz_start + 10]);
-//    printf("%d,%d,%d\r\n", Road_Width[0], Road_Width[1], Road_Width[2]);
-
-    if (abs(Road_Width[1] - Road_Width[0]) < 15 || abs(Road_Width[2] - Road_Width[1]) > 20)//Í¨¹ıÁ½ĞĞ¼äµÀÂ·¿í¶ÈµÄÍ»±ä×÷Îª±ÜÕÏ³õÅĞ¶Ï
-    {
-        test_black();//É¨ÃèºÚÉ«Êı
-//        printf("%d, %d, %d\r\n", count_black, count_black_1, count_black + count_black_1);
-        if (count_black + count_black_1 > 32)//×óÓÒºÚÉ«Êı´óÓÚÕı³£Öµ
-        {
-            if ((right_lose + left_lose) < 33 && count_black > count_black_1)//×ó±ÜÕÏ
-            {
-                block_in_process = 1;
-
-            }
-            if ((right_lose + left_lose) < 33 && count_black_1 > count_black)//ÓÒ±ÜÕÏ
-            {
-                block_in_process = 2;
-
-            }
-        }
-    }
-    return block_in_process;
-}
-
-void process_block_in_image(int dir)
-{
-    if (block_in_process == 1)//Ê¶±ğµ½×ó±ÜÕÏ
-    {
-        for (int row = IMAGE_HEIGHT - 1; row > 0; row--)
-        {
-            middle_line[row] = middle_line[row] + 30;
-//            left_edge[row] = left_edge[row] + 20;
-        }
-    }
-    if (block_in_process == 2)//Ê¶±ğµ½ÓÒ±ÜÕÏ
-    {
-        for (int row = IMAGE_HEIGHT - 1; row > 0; row--)
-        {
-            middle_line[row] = middle_line[row] - 30;
-//            right_edge[row] = right_edge[row] - 20;
-        }
-    }
-}
-
-int col_scan_all_white(int start_row)
-{
-    int j, i, ret = 0;
-    for (i = 0; i < IMAGE_WIDTH; i++)
-    {
-        for (j = start_row; j < IMAGE_HEIGHT; j++)
-        {
-            if (binary_image[j][i] == WHITE)//¼ÆÊıÖµÎª 0 µÄµã
-            {
-                break;
-            }
-        }
-        if (j == IMAGE_HEIGHT)
-            ret++;
-        //printf("j=%d\n\r", j);
-    }
-    return ret;
-}
-
-int process_circle_flag = -1;
-
-void analyze_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
-{
-
-    preprocess_image(img, mode);     //Ñ¹ËõÍ¼Ïñ¡¢¶şÖµ»¯Í¼Ïñ
-
-    search_border_line_and_Mid_line();
-    calc_middle_line_curvity();
-    calc_middleline_variance();
-
-    search_break(55, get_last_line() < 20 ? 20 : get_last_line());
-
-    barn_exist_flag = search_barn(0, 0);
-
-    circle_forecast = search_circle();
-    if (-1 != process_circle_flag)
-    {
-        process_circle_in_image(process_circle_flag);
-    }
-    if (0 != block_in_process)
-    {
-        process_block_in_image(block_in_process);
-    }
-    search_cross();
-
-    calc_image_error();
-    modify_err = get_image_error_single();
-    complex_image();
-
-}
-
-float get_image_error_single(void)//ÉãÏñÍ·ÄâºÏÖĞÏß
-{
-#define INDEX 1
-    float mid_val = 0.0f;
-    float result = 0.0f;
-    float weight_sum = 0.0f;
-
-    for (uint8 i = IMAGE_HEIGHT - 1; i > get_last_line(); i--)
-    {
-        result += image_row_weight[INDEX][i] * middle_line[i];
-        weight_sum += image_row_weight[INDEX][i];
-    }
-    if (weight_sum != 0)
-    {
-        result = result / weight_sum;
-    }
-    else
-    {
-        result = MID_LINE_VAL;
-    }
-    mid_val = result - MID_LINE_VAL;
-    return mid_val;
-}
-
-void set_process_circle_flag(int dir)
-{
-    process_circle_flag = dir;
-    circle_image_process_complete = 0;
-}
-
-void clear_process_circle_flag(void)
-{
-    process_circle_flag = -1;
-}
-
-void clear_process_block_flag(void)
-{
-    block_in_process = 0;
-}
-
-
-
-int Circle_Exit_Judgement(void)
-{
-    int black_pixel_cnt = 0;
-    for(int i = 0; i < 80; i++)
-    {
-        if(binary_image[60][i] == BLACK)
-        {
-            black_pixel_cnt++;
-        }
-    }
-    if(black_pixel_cnt > 75)
-    {
-        gpio_set_level(C4, 1);
-        return 1;
-
-    }
-
-    else return 0;
+    B->left_inflexion.valid  = 0;
+    B->left_inflexion.row    = 0;
+    B->left_inflexion.col    = 0;
+    B->right_inflexion.valid = 0;
+    B->right_inflexion.row   = 0;
+    B->right_inflexion.col   = IMAGE_WIDTH;
 }

@@ -20,8 +20,6 @@ uint8_t (*frame_buffers[2])[MT9V03X_H][MT9V03X_W] = {
     &mt9v03x_image1
 };
 
-float dat[4];
-
 /*
  *  Control_Task — 1ms 硬实时控制环
  *  触发方式：TIM2 1kHz 任务通知
@@ -54,7 +52,7 @@ static void Control_Task(void *pvParameters)
             /* ── 1ms 环 ── */
             imu_update();           /* 读取 ICM20602 原始数据并融合  */
             EC11_Scan();            /* 扫描旋转编码器，更新菜单状态  */
-            gpio_toggle_level(C4);
+
             motor_control(smartcar_status.inner_target);        /* 主驱动电机 PWM 输出  */
 
 
@@ -77,6 +75,7 @@ static void Control_Task(void *pvParameters)
             /* ── 100ms 环 ── */
             if (tick_count % 100 == 0)
             {
+
                 update_speed_and_distance();                   /* 读编码器(注意：速度计算和运行周期有关)，PID 速度闭环  */
                 smartcar_status.base_PWM = SpeedLoop_Update(); // 更新 base_throttle
             }
@@ -91,9 +90,7 @@ static void Control_Task(void *pvParameters)
 static void Perception_Task(void *pvParameters)
 {
     uint32_t frame_idx;
-    UBaseType_t high_water_mark;
 
-    variables_init();
     for (;;)
     {
         /* 阻塞等待摄像头帧通知 */
@@ -103,13 +100,13 @@ static void Perception_Task(void *pvParameters)
                         portMAX_DELAY);
 
 
-        analyze_image(*frame_buffers[frame_idx], OSTU);    /* 图像处理  */
+        image_analyze(frame_buffers[frame_idx]);    /* 图像处理  */
         analyze_road();     /* 赛道元素识别   */
         decision();         /* 路径决策，输出转向量  */
 
         /* ── 三步全部完成，打包结果写入队列 ── */
         PerceptionResult_t result;
-        result.image_error = get_image_error();
+        result.image_error = IMG_ERROR;
 
         /* xQueueOverwrite 专用于深度为1的队列，满时覆盖不阻塞 */
         xQueueOverwrite(perception_queue, &result);
@@ -150,7 +147,7 @@ static void UI_Task(void *pvParameters)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(40);
 
-    BaseType_t val;
+//    BaseType_t val;
 
     for (;;)
     {
@@ -163,7 +160,7 @@ static void UI_Task(void *pvParameters)
                 ui_list[i].cb(&key_msg);
             }
         }
-        printf("Dynamic threshold: %u\r\n", get_dynamic_thresh());
+//        printf("Dynamic threshold: %u\r\n", IMG_DYN_THR);
 //        printf("task \t prio \t stack \r\n");
 //        val = uxTaskGetStackHighWaterMark(control_task_handle);
 //        printf("Control:        %d      %d\r\n", PRIORITY_CONTROL, (int)val);
@@ -240,6 +237,11 @@ void pit_handler (void)
     }
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+// 空闲任务钩子函数
+void vApplicationIdleHook(void) {
+//    gpio_toggle_level(C4);
 }
 
 /*
