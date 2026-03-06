@@ -26,7 +26,7 @@
 
 ### **从理论到实战的跨越**
 这不是一个简单的“点灯Demo”，而是一个实际参加了竞赛、解决了真实工程挑战的项目。我和我的团队一起面对并攻克了：
-- **[实时性保障](Hovercraft_Control_System\firmware\project\DEBUG.md)**(点击链接查看debug日志)：在144MHz的RISC-V核心上优化FreeRTOS任务调度
+- **[实时性保障](Hovercraft_Control_System/firmware/project/DEBUG.md)**(点击链接查看debug日志)：在144MHz的RISC-V核心上优化FreeRTOS任务调度
 <!-- falsh的保存卡死问题 -->
 - **控制精度**：在无传感器条件下实现稳定的电机驱动和姿态控制
 <!-- 日复一日的实验室调试 -->
