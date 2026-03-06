@@ -112,10 +112,16 @@ int right_edge_break_cnt = 0;
 int left_edge_break_point = 0;
 int left_edge_break_cnt = 0;
 
-unsigned char
-Otsu1D(unsigned char img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], unsigned short height, unsigned short width)//一维大津法，计算全局阈值
+unsigned char Otsu1D(uint8_t img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], uint8 height, uint8 width)//一维大津法，计算全局阈值
 {
-    float Histogram[256] = {0};//建立一维灰度直方图,并初始化变量
+    taskENTER_CRITICAL();
+    // 检查传入指针有效性 =====
+    if ((uint32_t)img_2d < 0x20000000 || (uint32)img_2d > 0x2000FFFF) {
+        printf("[ERROR] Invalid img_2d pointer: 0x%08lX\r\n", (unsigned long)img_2d);
+        return 128;
+    }
+
+    float Histogram[256] = {0}; //建立一维灰度直方图,并初始化变量
     uint32 N = height * width;//像素的总数
 
     for (int i = 0; i < height; i++)//矩阵的行数
@@ -126,10 +132,15 @@ Otsu1D(unsigned char img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], unsigned short height, u
             Histogram[gray_val]++;//记录（i,j）的数量
         }
     }
+
+    // 归一化
+    uint32 total_pixels = 0;
     for (int i = 0; i < 256; i++)
     {
+        total_pixels += Histogram[i];
         Histogram[i] /= N;//归一化的每一个二元组的概率分布
     }
+
 
     float avg_val = 0.0;
 
@@ -148,6 +159,10 @@ Otsu1D(unsigned char img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], unsigned short height, u
         w += Histogram[i];
         u += i * Histogram[i];
 
+        // 跳过边界，避免除零
+        if (w < 1e-6f || w > 1.0f - 1e-6f)
+            continue;
+
         float t = avg_val * w - u;
         float variance = t * t / (w * (1 - w));
 
@@ -157,7 +172,171 @@ Otsu1D(unsigned char img_2d[IMAGE_HEIGHT][IMAGE_WIDTH], unsigned short height, u
             threshold = i;
         }
     }
+    taskEXIT_CRITICAL();
     return threshold;
+}
+
+/*!
+ *  @brief      大津法二值化0.8ms程序
+ *  @date:   2018-10
+ *  @since      v1.2
+ *  *image ：图像地址
+ *  width:  图像宽
+ *  height：图像高
+ *  @author     Z小旋
+ */
+uint8 otsuThreshold(uint8 *image, uint16 width, uint16 height)
+{
+    #define GrayScale 256
+    int pixelCount[GrayScale] = {0};//每个灰度值所占像素个数
+    float pixelPro[GrayScale] = {0};//每个灰度值所占总像素比例
+    int i,j;
+    int Sumpix = width * height;   //总像素点
+    uint8 threshold = 0;
+    uint8* data = image;  //指向像素数据的指针
+
+
+    //统计灰度级中每个像素在整幅图像中的个数
+    for (i = 0; i < height; i++)
+    {
+        for (j = 0; j < width; j++)
+        {
+            pixelCount[(int)data[i * width + j]]++;  //将像素值作为计数数组的下标
+          //   pixelCount[(int)image[i][j]]++;    若不用指针用这个
+        }
+    }
+    float u = 0;
+    for (i = 0; i < GrayScale; i++)
+    {
+        pixelPro[i] = (float)pixelCount[i] / Sumpix;   //计算每个像素在整幅图像中的比例
+        u += i * pixelPro[i];  //总平均灰度
+    }
+
+
+    float maxVariance=0.0;  //最大类间方差
+    float w0 = 0, avgValue  = 0;  //w0 前景比例 ，avgValue 前景平均灰度
+    for(int i = 0; i < 256; i++)     //每一次循环都是一次完整类间方差计算 (两个for叠加为1个)
+    {
+        w0 += pixelPro[i];  //假设当前灰度i为阈值, 0~i 灰度像素所占整幅图像的比例即前景比例
+        avgValue  += i * pixelPro[i];
+
+        float variance = pow((avgValue/w0 - u), 2) * w0 /(1 - w0);    //类间方差
+        if(variance > maxVariance)
+        {
+            maxVariance = variance;
+            threshold = i;
+        }
+    }
+
+    return threshold;
+
+}
+
+/**
+ * @brief:   获取积分图像
+ *
+ * @param:   *gray_img  灰度图像数组首地址
+ * @param:   *sum       保存积分图像数组的首地址
+ * @param:   width      灰度图像宽度
+ * @param:   height     灰度图像高度
+ *
+ * @date:    2022-12-20 created by 吉平.「集」
+ */
+void integral(uint8_t *gray_img, int *sum, int width, int height)
+{
+    for (int y = 0; y < height; y++)
+    {
+        // 获取行指针
+        uint8_t *input_row_ptr = &gray_img[y * width];
+        int *output_row_ptr = &sum[(y + 1) * width + 1]; // 积分图像比原始图像行和列都要多1
+
+        // 计算积分图像
+        for (int x = 0; x < width; x++)
+        {
+            output_row_ptr[x] = 0;                                                          // 清零
+            output_row_ptr[x] = output_row_ptr[x - 1] + input_row_ptr[x];                   // 0 + s_{y,x-1} + a_{x,y}
+            output_row_ptr[x] += output_row_ptr[x - width] - output_row_ptr[x - width - 1]; // 当前列和
+        }
+    }
+}
+
+/**
+ * @brief:   自适应阈值二值化
+ *
+ * @param:   *gray_img  灰度图像数组首地址
+ * @param:   width      灰度图像宽度
+ * @param:   height     灰度图像高度
+ *
+ *           @note 二值化会直接作用在原灰度图像上
+ *
+ * @date:    2022-12-20 created by 吉平.「集」
+ */
+void adaptive_threshold_binaryzation(uint8_t *gray_img, int width, int height)
+{
+    // 自适应阈值取n*n范围的像素计算局部最优阈值，这里计算合适的n的取值
+    int S = (width > height ? width : height)/8;
+    // T是一个可调参数，影响阈值（进而影响二值化效果）
+    float T = 0.15;
+
+    // 定义变量保存n*n框选的图像范围及像素数量
+    int s2 = S/2;
+    int x1, y1, x2, y2, count;
+
+    // 申请内存空间用于保存积分图像，积分图像比原始图像多一行一列
+    int *sum = NULL;
+    sum = (int *)calloc((width + 1) * (height + 1), sizeof(int)); // 申请内存空间，并对申请到的空间做零初始化
+
+    // 确认是否申请到了内存空间
+    if(sum != NULL)
+    {
+        integral(gray_img, sum, width, height); // 计算和获取积分图像
+
+        // 外层循环用于遍历图像的每一行
+        for (int y = 0; y < height; y++)
+        {
+            // 计算y轴上的框选范围
+            y1 = y - s2;
+            y2 = y + s2;
+
+            // 避免框选到图像外的像素点
+            y1 = y1 < 0 ? 0 : y1;
+            y2 = y2 > (height - 1) ? (height - 1) : y2;
+
+            // 获取灰度图像和积分图像的行指针（可以理解为单行图像的首个像素的地址）
+            uint8_t *row_ptr = &gray_img[y * width];
+            int *y1_ptr = &sum[y1 * width];
+            int *y2_ptr = &sum[y2 * width];
+
+            // 内层循环用于遍历图像的每一列
+            for (int x = 0; x < width; x++)
+            {
+                // 计算x轴上的框选范围
+                x1 = x - s2;
+                x2 = x + s2;
+
+                // 避免框选到图像外的像素点
+                x1 = x1 < 0 ? 0 : x1;
+                x2 = x2 > (width - 1) ? (width - 1) : x2;
+
+                // 计算框选的像素点的个数
+                count = (x2 - x1) * (y2 - y1);
+
+                // 计算局部阈值
+                int summation = y2_ptr[x2] + y1_ptr[x1] - y1_ptr[x2] - y2_ptr[x1]; // 利用积分图快速求区域和
+                uint8_t threshold = summation / count;
+
+                // 二值化
+                row_ptr[x] = ((int)(row_ptr[x] * count) > (int)(summation * (1.f - T))) ? 255 : 0;
+            }
+        }
+
+        free(sum); // 释放申请的内存空间
+        sum = NULL;
+    }
+    else
+    {
+        // do nothing
+    }
 }
 
 /*!
@@ -234,8 +413,9 @@ void lq_sobelAutoThreshold(unsigned char imageIn[IMAGE_HEIGHT][IMAGE_WIDTH],
 
 void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
 {
+
     int m = 0, n = 0;
-    unsigned char image_use[IMAGE_HEIGHT][IMAGE_WIDTH];
+    static uint8_t image_use[IMAGE_HEIGHT][IMAGE_WIDTH];
     //压缩图像
     for (int i = 0; i < MT9V03X_H; i += ROW_RAR)
     {
@@ -247,9 +427,12 @@ void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
         }
         m++;
     }
+
     if (mode == OSTU)
     {
         dynamic_thresh = Otsu1D(image_use, IMAGE_HEIGHT, IMAGE_WIDTH);
+//        dynamic_thresh = otsuThreshold(image_use[0], IMAGE_HEIGHT, IMAGE_WIDTH);
+//        adaptive_threshold_binaryzation(image_use[0], IMAGE_HEIGHT, IMAGE_WIDTH);
     }
     else if (mode == SobelAutoThreshold)
     {
@@ -261,7 +444,7 @@ void preprocess_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
     {
         for (int j = 0; j < IMAGE_WIDTH; j++)
         {
-            if (image_use[i][j] > dynamic_thresh)
+            if (image_use[i][j] > get_dynamic_thresh())
             {
                 binary_image[i][j] = WHITE;
             }
@@ -2199,7 +2382,9 @@ int process_circle_flag = -1;
 
 void analyze_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
 {
+
     preprocess_image(img, mode);     //压缩图像、二值化图像
+
     search_border_line_and_Mid_line();
     calc_middle_line_curvity();
     calc_middleline_variance();
@@ -2223,8 +2408,6 @@ void analyze_image(uint8_t img[MT9V03X_H][MT9V03X_W], unsigned char mode)
     modify_err = get_image_error_single();
     complex_image();
 
-    //send_binary_image();
-//    calculate_road_width();
 }
 
 float get_image_error_single(void)//摄像头拟合中线

@@ -54,7 +54,7 @@ static void Control_Task(void *pvParameters)
             /* ── 1ms 环 ── */
             imu_update();           /* 读取 ICM20602 原始数据并融合  */
             EC11_Scan();            /* 扫描旋转编码器，更新菜单状态  */
-
+            gpio_toggle_level(C4);
             motor_control(smartcar_status.inner_target);        /* 主驱动电机 PWM 输出  */
 
 
@@ -77,7 +77,6 @@ static void Control_Task(void *pvParameters)
             /* ── 100ms 环 ── */
             if (tick_count % 100 == 0)
             {
-                gpio_toggle_level(C4);
                 update_speed_and_distance();                   /* 读编码器(注意：速度计算和运行周期有关)，PID 速度闭环  */
                 smartcar_status.base_PWM = SpeedLoop_Update(); // 更新 base_throttle
             }
@@ -92,9 +91,7 @@ static void Control_Task(void *pvParameters)
 static void Perception_Task(void *pvParameters)
 {
     uint32_t frame_idx;
-
-    TickType_t start_time, end_time;
-    uint32_t processing_time_ms;
+    UBaseType_t high_water_mark;
 
     variables_init();
     for (;;)
@@ -104,18 +101,11 @@ static void Perception_Task(void *pvParameters)
                         0xFFFFFFFF,
                         &frame_idx,
                         portMAX_DELAY);
-        // 开始计时
-        start_time = xTaskGetTickCount();  // 毫秒级
+
 
         analyze_image(*frame_buffers[frame_idx], OSTU);    /* 图像处理  */
         analyze_road();     /* 赛道元素识别   */
         decision();         /* 路径决策，输出转向量  */
-
-        // 结束计时
-        end_time = xTaskGetTickCount();
-        processing_time_ms = (end_time - start_time) * portTICK_PERIOD_MS;
-        // 打印或记录时间
-//        printf("Processing time: %lu ms\r\n", processing_time_ms);
 
         /* ── 三步全部完成，打包结果写入队列 ── */
         PerceptionResult_t result;
@@ -124,6 +114,14 @@ static void Perception_Task(void *pvParameters)
         /* xQueueOverwrite 专用于深度为1的队列，满时覆盖不阻塞 */
         xQueueOverwrite(perception_queue, &result);
 
+//        // 在每次执行后检查堆栈剩余
+//        high_water_mark = uxTaskGetStackHighWaterMark(NULL);
+//
+//        // 如果剩余太少，打印警告
+//        if (high_water_mark < 512) {  // 小于512字节时警告
+//            printf("Warning: Perception stack low! Remaining: %lu words\r\n",
+//                   high_water_mark);
+//        }
     }
 }
 
@@ -139,7 +137,6 @@ static void System_Task(void *pvParameters)
     for (;;)
     {
         vTaskDelayUntil(&xLastWakeTime, xPeriod);
-
         update_voltage();   /* ADC 采样，更新 system_status */
     }
 }
@@ -153,27 +150,20 @@ static void UI_Task(void *pvParameters)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(40);
 
-//    BaseType_t val;
+    BaseType_t val;
 
     for (;;)
     {
         vTaskDelayUntil(&xLastWakeTime, xPeriod);
 
-
-//        GUI_Update();   /* 刷新 IPS200 显示内容  */
-        for (uint8_t i = 0 ; i < E_UI_MAX ; i++)
+        for (uint8_t i = 0; i < E_UI_MAX; i++)
         {
-            if (ui_index == ui_list[i].index)//如果当前索引等于UI表中的索引
+            if (ui_index == ui_list[i].index && ui_list[i].cb)
             {
-                if (ui_list[i].cb)//执行UI对应的回调函数
-                {
-//                    taskENTER_CRITICAL();
-                    ui_list[i].cb(&key_msg);
-//                    taskEXIT_CRITICAL();
-                }
+                ui_list[i].cb(&key_msg);
             }
         }
-
+        printf("Dynamic threshold: %u\r\n", get_dynamic_thresh());
 //        printf("task \t prio \t stack \r\n");
 //        val = uxTaskGetStackHighWaterMark(control_task_handle);
 //        printf("Control:        %d      %d\r\n", PRIORITY_CONTROL, (int)val);
@@ -183,7 +173,8 @@ static void UI_Task(void *pvParameters)
 //        printf("System:         %d      %d\r\n", PRIORITY_SYSTEM, (int)val);
 //        val = uxTaskGetStackHighWaterMark(ui_task_handle);
 //        printf("UI:             %d      %d\r\n", PRIORITY_UI, (int)val);
-    }
+
+     }
 }
 
 void FreeRTOS_Start(void)
@@ -257,18 +248,9 @@ void pit_handler (void)
 void dvp_handler (void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
+//    gpio_toggle_level(C4);
     static uint32_t frame_cnt = 0;
-//    if (frame_cnt % 2)
-//    {
-//        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image0[0]);
-//    }
-//    else
-//    {
-//        DVP->DMA_BUF0 = (uint32)((uint32 *)&mt9v03x_image1[0]);
-//    }
-//    uint8_t ready_frame_idx = (frame_cnt % 2) ? 1 : 0;
-//
+
     // 切换DMA缓冲区
     DVP->DMA_BUF0 = (uint32_t)(frame_cnt % 2 ? mt9v03x_image1 : mt9v03x_image0);
 

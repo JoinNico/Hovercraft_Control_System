@@ -1,9 +1,9 @@
 #ifndef _IMAGE_H
 #define _IMAGE_H
 
-#include "zf_device_mt9v03x_dvp.h"
-#include "zf_device_ips200.h"
-#include "zf_common_font.h"
+//#include "zf_device_mt9v03x_dvp.h"
+//#include "zf_device_ips200.h"
+//#include "zf_common_font.h"
 #include "zf_common_headfile.h"
 
 #define IMAGE_HEIGHT 60 //120
@@ -58,8 +58,8 @@ extern int middle_line[IMAGE_HEIGHT + 1];
 
 extern unsigned char binary_image[IMAGE_HEIGHT][IMAGE_WIDTH];
 extern unsigned char composite_image[IMAGE_HEIGHT][IMAGE_WIDTH];
-
 extern unsigned char dynamic_thresh;
+
 extern int left_lose;
 extern int right_lose;
 extern int all_lose;
@@ -100,6 +100,10 @@ static inline float get_curvity(void)               {return curvity;}
 static inline float get_image_error(void)
 {
     return image_error;
+}
+static inline uint8_t get_dynamic_thresh(void)
+{
+    return dynamic_thresh;
 }
 static inline float get_image_middle_line(void) {return image_error;}
 static inline int get_break_cnt(void)   {return break_cnt;}

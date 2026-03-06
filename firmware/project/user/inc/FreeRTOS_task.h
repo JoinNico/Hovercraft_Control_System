@@ -10,6 +10,12 @@
 
 #include "zf_common_headfile.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#include "queue.h"
+#include "semphr.h"
+
 /* ─────────────────────────── 任务优先级 ─────────────────────────── */
 #define PRIORITY_CONTROL        12
 #define PRIORITY_PERCEPTION     11
@@ -17,10 +23,10 @@
 #define PRIORITY_UI              2
 
 /* ─────────────────────────── 任务栈深度 ─────────────────────────── */
-#define STACK_CONTROL           256
+#define STACK_CONTROL           512
 #define STACK_PERCEPTION        2048
-#define STACK_SYSTEM            128
-#define STACK_UI                512
+#define STACK_SYSTEM            512
+#define STACK_UI                1024
 
 typedef struct
 {

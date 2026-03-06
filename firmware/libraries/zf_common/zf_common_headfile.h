@@ -36,16 +36,10 @@
 #ifndef __HEADFILE_H
 #define __HEADFILE_H
 
-
-
-
-
-#include "stdio.h"
-#include "stdint.h"
-#include "string.h"
-#include "math.h"
-
-
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
 
 //===================================================芯片 SDK 底层===================================================
 #include "ch32v30x_adc.h"
@@ -133,12 +127,8 @@
 
 
 //===================================================应用组件层===================================================
-#include "FreeRTOS_task.h"
-#include "FreeRTOS.h"
 #include "debug.h"
-#include "task.h"
-#include "timers.h"
-#include "queue.h"
+#include "FreeRTOS_task.h"
 //===================================================应用组件层===================================================
 
 //===================================================用户自定义文件===================================================
@@ -146,7 +136,6 @@
 #include "pid.h"
 #include "control.h"
 #include "buzzer.h"
-//#include "image.h"
 #include "imageplus.h"
 #include "camera.h"
 #include "encoder.h"
