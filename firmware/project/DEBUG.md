@@ -15,6 +15,7 @@
 | Perception_Task | 图像采集与算法处理            | DVP 场中断通知         | 10      |
 | System_Task     | 电压监测                 | 100 ms 周期唤醒       | 3       |
 | UI_Task         | 屏幕显示刷新               | 40 ms 周期唤醒        | 2       |
+
 Control_Task 作为电机控制的一把手，采用硬实时控制，并设定最高优先级；Control_Task 依赖 Perception 输出的 `image_error` 做 PID 运算，故Perception_Task次优先级。而对于System_Task、UI_Task一个考虑设备安全性，另一个考虑设备交互性，在竞赛中没有要求，故低优先级。
 
 ### BUG 现象描述
