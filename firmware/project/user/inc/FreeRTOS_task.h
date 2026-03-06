@@ -10,12 +10,6 @@
 
 #include "zf_common_headfile.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "timers.h"
-#include "queue.h"
-#include "semphr.h"
-
 /* ─────────────────────────── 任务优先级 ─────────────────────────── */
 #define PRIORITY_CONTROL        12
 #define PRIORITY_PERCEPTION     10
@@ -34,5 +28,5 @@ typedef struct
 } PerceptionResult_t;
 
 void FreeRTOS_Start(void);
-
+void ConfigureTimeForRunTimeStats(void);
 #endif /* FREERTOS_TASK_H_ */

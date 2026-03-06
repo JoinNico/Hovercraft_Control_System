@@ -71,7 +71,7 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 #include "debug.h"
-
+#include "FreeRTOS_task.h"
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -91,7 +91,7 @@
 #define configMTIMECMP_BASE_ADDRESS  ( 0 )
 
 #define configUSE_PREEMPTION			1
-#define configUSE_IDLE_HOOK				1
+#define configUSE_IDLE_HOOK				0
 #define configUSE_TICK_HOOK				0
 #define configCPU_CLOCK_HZ				144000000
 #define configTICK_RATE_HZ				( ( TickType_t ) 1000 )
@@ -99,7 +99,6 @@
 #define configMINIMAL_STACK_SIZE		( ( unsigned short ) 256 ) /* Can be as low as 60 but some of the demo tasks that use this constant require it to be higher. */
 #define configTOTAL_HEAP_SIZE			( ( size_t ) ( 32 * 1024 ) )
 #define configMAX_TASK_NAME_LEN			( 16 )
-#define configUSE_TRACE_FACILITY		0
 #define configUSE_16_BIT_TICKS			0
 #define configIDLE_SHOULD_YIELD			0
 #define configUSE_MUTEXES				1
@@ -109,15 +108,22 @@
 #define configUSE_MALLOC_FAILED_HOOK	0
 #define configUSE_APPLICATION_TASK_TAG	0
 #define configUSE_COUNTING_SEMAPHORES	1
-#define configGENERATE_RUN_TIME_STATS	0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
+
+#define configUSE_TRACE_FACILITY        1
+#define configUSE_STATS_FORMATTING_FUNCTIONS  1
+#define configGENERATE_RUN_TIME_STATS   1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()  ConfigureTimeForRunTimeStats()    // 定时器3提供时间统计的时基，频率为10K，即周期为100us
+#define portGET_RUN_TIME_COUNTER_VALUE()          FreeRTOSRunTimeTicks              // 获取时间统计时间值
+
+extern volatile unsigned long long FreeRTOSRunTimeTicks;
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 			0
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Software timer definitions. */
-#define configUSE_TIMERS				1
+#define configUSE_TIMERS				0
 #define configTIMER_TASK_PRIORITY		( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH		4
 #define configTIMER_TASK_STACK_DEPTH	( configMINIMAL_STACK_SIZE )
@@ -134,7 +140,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelayUntil				1
 #define INCLUDE_vTaskDelay					1
 #define INCLUDE_eTaskGetState				1
-#define INCLUDE_xTimerPendFunctionCall		1
+#define INCLUDE_xTimerPendFunctionCall		0
 #define INCLUDE_xTaskAbortDelay				1
 #define INCLUDE_xTaskGetHandle				1
 #define INCLUDE_xSemaphoreGetMutexHolder	1
@@ -146,6 +152,5 @@ header file. */
 
 /* Map to the platform printf function. */
 #define configPRINT_STRING( pcString )  printf( pcString )
-
 
 #endif /* FREERTOS_CONFIG_H */

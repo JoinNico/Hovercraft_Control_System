@@ -335,6 +335,8 @@ void TIM7_IRQHandler(void)
     {
        TIM_ClearITPendingBit(TIM7, TIM_IT_Update );
 
+       extern void pit7_handler (void);
+       pit7_handler();
 
     }
 }

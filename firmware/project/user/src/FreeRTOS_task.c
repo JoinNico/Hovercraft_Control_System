@@ -6,6 +6,12 @@
  */
 #include "FreeRTOS_task.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#include "queue.h"
+#include "semphr.h"
+
 /* ─────────────────────────── 任务句柄 ─────────────────────────── */
 TaskHandle_t control_task_handle;
 TaskHandle_t perception_task_handle;
@@ -146,7 +152,7 @@ static void UI_Task(void *pvParameters)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(40);
-
+    char RunTimeInfo[512];
 //    BaseType_t val;
 
     for (;;)
@@ -170,6 +176,11 @@ static void UI_Task(void *pvParameters)
 //        printf("System:         %d      %d\r\n", PRIORITY_SYSTEM, (int)val);
 //        val = uxTaskGetStackHighWaterMark(ui_task_handle);
 //        printf("UI:             %d      %d\r\n", PRIORITY_UI, (int)val);
+
+        memset(RunTimeInfo, 0, 512);
+        vTaskGetRunTimeStats(RunTimeInfo);      //获取任务运行时间信息
+        printf("task\t\ttime\t\tpercentage\r\n");
+        printf("%s\r\n",RunTimeInfo);
 
      }
 }
@@ -239,11 +250,6 @@ void pit_handler (void)
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-// 空闲任务钩子函数
-void vApplicationIdleHook(void) {
-//    gpio_toggle_level(C4);
-}
-
 /*
  *  摄像头 DVP 场中断句柄
  */
@@ -267,4 +273,20 @@ void dvp_handler (void)
     frame_cnt++;
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+//FreeRTOS 时间统计所用的节拍计数器
+volatile unsigned long long FreeRTOSRunTimeTicks;
+//初始化 TIM3 使其为 FreeRTOS 的时间统计提供时基
+void ConfigureTimeForRunTimeStats(void)
+{
+    FreeRTOSRunTimeTicks = 0;
+
+    pit_us_init(TIM7_PIT, 100);
+    interrupt_set_priority(TIM7_IRQn, 1);
+}
+
+void pit7_handler (void)
+{
+    FreeRTOSRunTimeTicks++;
 }
